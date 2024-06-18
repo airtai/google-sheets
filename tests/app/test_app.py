@@ -1,4 +1,5 @@
 import datetime
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -9,6 +10,28 @@ client = TestClient(app)
 
 
 class TestRoutes:
+    def test_get_sheet(self) -> None:
+        with patch(
+            "google_sheets.app.load_user_credentials",
+            return_value={"refresh_token": "abcdf"},
+        ) as mock_load_user_credentials:
+            excepted = [
+                ["Campaign", "Ad Group", "Keyword"],
+                ["Campaign A", "Ad group A", "Keyword A"],
+                ["Campaign A", "Ad group A", "Keyword B"],
+                ["Campaign A", "Ad group A", "Keyword C"],
+            ]
+            with patch(
+                "google_sheets.app._get_sheet", return_value=excepted
+            ) as mock_get_sheet:
+                response = client.get(
+                    "/sheet?user_id=123&spreadsheet_id=abc&range=Sheet1"
+                )
+                mock_load_user_credentials.assert_called_once()
+                mock_get_sheet.assert_called_once()
+                assert response.status_code == 200
+                assert response.json() == excepted
+
     def test_weather_route(self) -> None:
         response = client.get("/?city=Chennai")
         assert response.status_code == 200

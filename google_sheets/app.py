@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Annotated, Any, List, Union
 
 import python_weather
+from asyncify import asyncify
 from fastapi import FastAPI, HTTPException, Query
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -118,6 +119,7 @@ async def load_user_credentials(user_id: Union[int, str]) -> Any:
     return data.creds
 
 
+@asyncify  # type: ignore[misc]
 def _get_sheet(user_credentials: Any, spreadshit_id: str, range: str) -> Any:
     sheets_credentials = {
         "refresh_token": user_credentials["refresh_token"],
@@ -143,7 +145,7 @@ async def get_sheet(
     user_id: Annotated[
         int, Query(description="The user ID for which the data is requested")
     ],
-    spreadshit_id: Annotated[
+    spreadsheet_id: Annotated[
         str, Query(description="ID of the Google Sheet to fetch data from")
     ],
     range: Annotated[
@@ -152,7 +154,7 @@ async def get_sheet(
     ],
 ) -> Union[str, List[List[str]]]:
     user_credentials = await load_user_credentials(user_id)
-    values = _get_sheet(user_credentials, spreadshit_id, range)
+    values = await _get_sheet(user_credentials, spreadsheet_id, range)
 
     if not values:
         return "No data found."
