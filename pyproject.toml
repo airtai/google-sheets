@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "google-sheets"
-description = "google-sheets: A simple weather API made for usage with FastAgency"
+description = "google-sheets: A simple Google Sheets API made for usage with FastAgency"
 readme = "README.md"
 authors = [
     { name = "airt", email = "info@airt.ai" },
@@ -110,11 +110,11 @@ exclude = [
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-only-include = ["google-sheets"]
+only-include = ["google_sheets"]
 
 [tool.hatch.build.targets.wheel.sources]
 "src" = ""
-# "scripts" = "google-sheets/templates"
+# "scripts" = "google_sheets/templates"
 
 [tool.mypy]
 
