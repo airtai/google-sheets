@@ -29,11 +29,11 @@ jobs:
           pip install -e ".[docs,lint]"
       - name: Run mypy
         shell: bash
-        run: mypy google-sheets tests
+        run: mypy google_sheets tests
 
       - name: Run bandit
         shell: bash
-        run: bandit -c pyproject.toml -r google-sheets
+        run: bandit -c pyproject.toml -r google_sheets
 
       - name: Run Semgrep
         shell: bash
