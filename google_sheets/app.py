@@ -23,7 +23,7 @@ base_url = (
 app = FastAPI(
     servers=[{"url": base_url, "description": "Weather app server"}],
     version=__version__,
-    title="WeatherAPI",
+    title="google-sheets",
 )
 
 

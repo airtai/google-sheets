@@ -22,7 +22,7 @@ fi
 
 ssh_command="ssh -o StrictHostKeyChecking=no -i key.pem azureuser@$DOMAIN"
 
-container_name="weatherapi"
+container_name="google-sheets"
 log_file="${container_name}.log"
 
 echo "INFO: Capturing docker container logs"

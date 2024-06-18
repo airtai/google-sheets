@@ -3,8 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "weatherapi"
-description = "WeatherAPI: A simple weather API made for usage with FastAgency"
+name = "google-sheets"
+description = "google-sheets: A simple Google Sheets API made for usage with FastAgency"
 readme = "README.md"
 authors = [
     { name = "airt", email = "info@airt.ai" },
@@ -78,26 +78,26 @@ test-core = [
 ]
 
 testing = [
-    "weatherapi[test-core]",
-    "weatherapi[server]", # Uvicorn is needed for testing
+    "google-sheets[test-core]",
+    "google-sheets[server]", # Uvicorn is needed for testing
 ]
 
 dev = [
-    "weatherapi[server,lint,testing]",
+    "google-sheets[server,lint,testing]",
     "pre-commit==3.7.1",
     "detect-secrets==1.5.0",
 ]
 
 [project.urls]
-Tracker = "https://github.com/airtai/weatherapi/issues"
-Source = "https://github.com/airtai/weatherapi"
+Tracker = "https://github.com/airtai/google-sheets/issues"
+Source = "https://github.com/airtai/google-sheets"
 Discord = "https://discord.gg/qFm6aSqq59"
 
 [project.scripts]
-# weatherapi = "weatherapi.__main__:cli"
+# google_sheets = "google_sheets.__main__:cli"
 
 [tool.hatch.version]
-path = "weatherapi/__about__.py"
+path = "google_sheets/__about__.py"
 
 [tool.hatch.build]
 skip-excluded-dirs = true
@@ -110,15 +110,15 @@ exclude = [
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-only-include = ["weatherapi"]
+only-include = ["google_sheets"]
 
 [tool.hatch.build.targets.wheel.sources]
 "src" = ""
-# "scripts" = "weatherapi/templates"
+# "scripts" = "google_sheets/templates"
 
 [tool.mypy]
 
-files = ["weatherapi", "tests"]
+files = ["google_sheets", "tests"]
 
 strict = true
 python_version = "3.9"
@@ -145,7 +145,7 @@ disallow_any_unimported = false
 fix = true
 line-length = 88
 # target-version = 'py39'
-include = ["weatherapi/**/*.py", "weatherapi/**/*.pyi", "tests/**/*.py", "pyproject.toml"]
+include = ["google_sheets/**/*.py", "google_sheets/**/*.pyi", "tests/**/*.py", "pyproject.toml"]
 exclude = ["docs/docs_src"]
 
 [tool.ruff.lint]
@@ -206,7 +206,7 @@ concurrency = [
     "thread"
 ]
 source = [
-    "weatherapi",
+    "google_sheets",
 #    "tests",
 ]
 context = '${CONTEXT}'

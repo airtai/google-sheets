@@ -11,7 +11,7 @@ x-logging: &default-logging
 
 version: "3.4"
 
-name: weatherapi
+name: google-sheets
 services:
   fastapi-app:  # nosemgrep
     image: ghcr.io/${GITHUB_REPOSITORY}:${TAG}
@@ -22,8 +22,8 @@ services:
       - DOMAIN=${DOMAIN}
     logging: *default-logging
     networks:
-      - weatherapi
+      - google-sheets
 
 networks:
-  weatherapi:
-    name: weatherapi
+  google-sheets:
+    name: google-sheets

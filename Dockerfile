@@ -21,7 +21,7 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
 
 RUN python3 -m pip install --upgrade pip
 
-COPY weatherapi ./weatherapi
+COPY google_sheets ./google_sheets
 COPY scripts/* pyproject.toml README.md ./
 RUN pip install -e ".[dev]"
 
