@@ -2,8 +2,8 @@ import datetime
 
 from fastapi.testclient import TestClient
 
-from weatherapi import __version__ as version
-from weatherapi.app import app
+from google_sheets import __version__ as version
+from google_sheets.app import app
 
 client = TestClient(app)
 
@@ -37,7 +37,7 @@ class TestRoutes:
     def test_openapi(self) -> None:
         expected = {
             "openapi": "3.1.0",
-            "info": {"title": "WeatherAPI", "version": version},
+            "info": {"title": "google-sheets", "version": version},
             "servers": [
                 {"url": "http://localhost:8000", "description": "Weather app server"}
             ],
