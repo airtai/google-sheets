@@ -3,7 +3,7 @@ import json
 import logging
 from os import environ
 from pathlib import Path
-from typing import Annotated, Any, List, Union
+from typing import Annotated, Any, Dict, List, Union
 
 import python_weather
 from asyncify import asyncify
@@ -114,20 +114,20 @@ async def get_user(user_id: Union[int, str]) -> Any:
 async def load_user_credentials(user_id: Union[int, str]) -> Any:
     await get_user(user_id=user_id)
     async with get_db_connection() as db:
-        data = await db.gauth.find_unique_or_raise(where={"user_id": user_id})
+        data = await db.gauth.find_unique_or_raise(where={"user_id": user_id})  # type: ignore[typeddict-item]
 
     return data.creds
 
 
 @asyncify  # type: ignore[misc]
 def _get_sheet(user_credentials: Any, spreadshit_id: str, range: str) -> Any:
-    sheets_credentials = {
+    sheets_credentials: Dict[str, str] = {
         "refresh_token": user_credentials["refresh_token"],
         "client_id": oauth2_settings["clientId"],
         "client_secret": oauth2_settings["clientSecret"],
     }
 
-    creds = Credentials.from_authorized_user_info(
+    creds = Credentials.from_authorized_user_info(  # type: ignore[no-untyped-call]
         info=sheets_credentials, scopes=["https://www.googleapis.com/auth/spreadsheets"]
     )
     service = build("sheets", "v4", credentials=creds)
