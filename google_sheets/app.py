@@ -87,7 +87,7 @@ def _get_sheet(service: Any, spreadsheet_id: str, range: str) -> Any:
     return values
 
 
-async def list_sheets(user_id: int) -> List[Any]:
+async def list_sheets(user_id: int) -> List[Dict[str, str]]:
     user_credentials = await load_user_credentials(user_id)
     sheets_credentials: Dict[str, str] = {
         "refresh_token": user_credentials["refresh_token"],
@@ -107,7 +107,11 @@ async def list_sheets(user_id: int) -> List[Any]:
     # Call the Drive v3 API
     results = (
         service.files()
-        .list(pageSize=10, fields="nextPageToken, files(id, name)")
+        .list(
+            q="mimeType='application/vnd.google-apps.spreadsheet'",
+            pageSize=10,
+            fields="nextPageToken, files(id, name)",
+        )
         .execute()
     )
     items = results.get("files", [])
@@ -143,6 +147,8 @@ async def get_all_file_names(
     user_id: Annotated[
         int, Query(description="The user ID for which the data is requested")
     ],
-) -> List[Any]:
-    files = await list_sheets(user_id=user_id)
-    return files
+) -> Dict[str, str]:
+    files: List[Dict[str, str]] = await list_sheets(user_id=user_id)
+    # create dict where key is id and value is name
+    files_dict = {file["id"]: file["name"] for file in files}
+    return files_dict
