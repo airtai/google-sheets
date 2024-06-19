@@ -8,6 +8,7 @@ from asyncify import asyncify
 from fastapi import FastAPI, HTTPException, Query
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from prisma.errors import RecordNotFoundError
 
 from . import __version__
 from .db_helpers import get_db_connection, get_wasp_db_url
@@ -57,37 +58,17 @@ async def get_user(user_id: Union[int, str]) -> Any:
 async def load_user_credentials(user_id: Union[int, str]) -> Any:
     await get_user(user_id=user_id)
     async with get_db_connection() as db:
-        data = await db.gauth.find_unique_or_raise(where={"user_id": user_id})  # type: ignore[typeddict-item]
+        try:
+            data = await db.gauth.find_unique_or_raise(where={"user_id": user_id})  # type: ignore[typeddict-item]
+        except RecordNotFoundError as e:
+            raise HTTPException(
+                status_code=404, detail="User hasn't grant access yet!"
+            ) from e
 
     return data.creds
 
 
-async def _build_service(user_id: int) -> Any:
-    user_credentials = await load_user_credentials(user_id)
-    sheets_credentials: Dict[str, str] = {
-        "refresh_token": user_credentials["refresh_token"],
-        "client_id": oauth2_settings["clientId"],
-        "client_secret": oauth2_settings["clientSecret"],
-    }
-
-    creds = Credentials.from_authorized_user_info(  # type: ignore[no-untyped-call]
-        info=sheets_credentials, scopes=["https://www.googleapis.com/auth/spreadsheets"]
-    )
-    service = build("sheets", "v4", credentials=creds)
-    return service
-
-
-@asyncify  # type: ignore[misc]
-def _get_sheet(service: Any, spreadsheet_id: str, range: str) -> Any:
-    # Call the Sheets API
-    sheet = service.spreadsheets()
-    result = sheet.values().get(spreadsheetId=spreadsheet_id, range=range).execute()
-    values = result.get("values", [])
-
-    return values
-
-
-async def list_sheets(user_id: int) -> List[Dict[str, str]]:
+async def _build_service(user_id: int, service_name: str, version: str) -> Any:
     user_credentials = await load_user_credentials(user_id)
     sheets_credentials: Dict[str, str] = {
         "refresh_token": user_credentials["refresh_token"],
@@ -102,8 +83,22 @@ async def list_sheets(user_id: int) -> List[Dict[str, str]]:
             "https://www.googleapis.com/auth/drive.metadata.readonly",
         ],
     )
-    service = build("drive", "v3", credentials=creds)
+    service = build(serviceName=service_name, version=version, credentials=creds)
+    return service
 
+
+@asyncify  # type: ignore[misc]
+def _get_sheet(service: Any, spreadsheet_id: str, range: str) -> Any:
+    # Call the Sheets API
+    sheet = service.spreadsheets()
+    result = sheet.values().get(spreadsheetId=spreadsheet_id, range=range).execute()
+    values = result.get("values", [])
+
+    return values
+
+
+@asyncify  # type: ignore[misc]
+def list_sheets(service: Any) -> List[Dict[str, str]]:
     # Call the Drive v3 API
     results = (
         service.files()
@@ -131,7 +126,7 @@ async def get_sheet(
         Query(description="The range of cells to fetch data from. E.g. 'Sheet1!A1:B2'"),
     ],
 ) -> Union[str, List[List[str]]]:
-    service = await _build_service(user_id)
+    service = await _build_service(user_id=user_id, service_name="sheets", version="v4")
     values = await _get_sheet(
         service=service, spreadsheet_id=spreadsheet_id, range=range
     )
@@ -148,7 +143,8 @@ async def get_all_file_names(
         int, Query(description="The user ID for which the data is requested")
     ],
 ) -> Dict[str, str]:
-    files: List[Dict[str, str]] = await list_sheets(user_id=user_id)
+    service = await _build_service(user_id=user_id, service_name="drive", version="v3")
+    files: List[Dict[str, str]] = await list_sheets(service=service)
     # create dict where key is id and value is name
     files_dict = {file["id"]: file["name"] for file in files}
     return files_dict
