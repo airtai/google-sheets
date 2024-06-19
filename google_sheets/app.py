@@ -62,8 +62,8 @@ async def load_user_credentials(user_id: Union[int, str]) -> Any:
     return data.creds
 
 
-@asyncify  # type: ignore[misc]
-def _get_sheet(user_credentials: Any, spreadshit_id: str, range: str) -> Any:
+async def _build_service(user_id: int) -> Any:
+    user_credentials = await load_user_credentials(user_id)
     sheets_credentials: Dict[str, str] = {
         "refresh_token": user_credentials["refresh_token"],
         "client_id": oauth2_settings["clientId"],
@@ -74,10 +74,14 @@ def _get_sheet(user_credentials: Any, spreadshit_id: str, range: str) -> Any:
         info=sheets_credentials, scopes=["https://www.googleapis.com/auth/spreadsheets"]
     )
     service = build("sheets", "v4", credentials=creds)
+    return service
 
+
+@asyncify  # type: ignore[misc]
+def _get_sheet(service: Any, spreadsheet_id: str, range: str) -> Any:
     # Call the Sheets API
     sheet = service.spreadsheets()
-    result = sheet.values().get(spreadsheetId=spreadshit_id, range=range).execute()
+    result = sheet.values().get(spreadsheetId=spreadsheet_id, range=range).execute()
     values = result.get("values", [])
 
     return values
@@ -96,8 +100,10 @@ async def get_sheet(
         Query(description="The range of cells to fetch data from. E.g. 'Sheet1!A1:B2'"),
     ],
 ) -> Union[str, List[List[str]]]:
-    user_credentials = await load_user_credentials(user_id)
-    values = await _get_sheet(user_credentials, spreadsheet_id, range)
+    service = await _build_service(user_id)
+    values = await _get_sheet(
+        service=service, spreadsheet_id=spreadsheet_id, range=range
+    )
 
     if not values:
         return "No data found."
