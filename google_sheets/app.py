@@ -97,22 +97,6 @@ def _get_sheet(service: Any, spreadsheet_id: str, range: str) -> Any:
     return values
 
 
-@asyncify  # type: ignore[misc]
-def list_sheets(service: Any) -> List[Dict[str, str]]:
-    # Call the Drive v3 API
-    results = (
-        service.files()
-        .list(
-            q="mimeType='application/vnd.google-apps.spreadsheet'",
-            pageSize=10,
-            fields="nextPageToken, files(id, name)",
-        )
-        .execute()
-    )
-    items = results.get("files", [])
-    return items  # type: ignore[no-any-return]
-
-
 @app.get("/sheet", description="Get data from a Google Sheet")
 async def get_sheet(
     user_id: Annotated[
@@ -137,14 +121,30 @@ async def get_sheet(
     return values  # type: ignore[no-any-return]
 
 
-@app.get("/all", description="Get all sheets associated with the user")
+@asyncify  # type: ignore[misc]
+def _get_files(service: Any) -> List[Dict[str, str]]:
+    # Call the Drive v3 API
+    results = (
+        service.files()
+        .list(
+            q="mimeType='application/vnd.google-apps.spreadsheet'",
+            pageSize=100,  # The default value is 100
+            fields="nextPageToken, files(id, name)",
+        )
+        .execute()
+    )
+    items = results.get("files", [])
+    return items  # type: ignore[no-any-return]
+
+
+@app.get("/get-all-file-names", description="Get all sheets associated with the user")
 async def get_all_file_names(
     user_id: Annotated[
         int, Query(description="The user ID for which the data is requested")
     ],
 ) -> Dict[str, str]:
     service = await _build_service(user_id=user_id, service_name="drive", version="v3")
-    files: List[Dict[str, str]] = await list_sheets(service=service)
+    files: List[Dict[str, str]] = await _get_files(service=service)
     # create dict where key is id and value is name
     files_dict = {file["id"]: file["name"] for file in files}
     return files_dict

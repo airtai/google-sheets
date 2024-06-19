@@ -31,6 +31,27 @@ class TestRoutes:
                 assert response.status_code == 200
                 assert response.json() == excepted
 
+    def test_get_all_file_names(self) -> None:
+        with (
+            patch(
+                "google_sheets.app.load_user_credentials",
+                return_value={"refresh_token": "abcdf"},
+            ) as mock_load_user_credentials,
+            patch(
+                "google_sheets.app._get_files",
+                return_value=[
+                    {"id": "abc", "name": "file1"},
+                    {"id": "def", "name": "file2"},
+                ],
+            ) as mock_get_files,
+        ):
+            expected = {"abc": "file1", "def": "file2"}
+            response = client.get("/get-all-file-names?user_id=123")
+            mock_load_user_credentials.assert_called_once()
+            mock_get_files.assert_called_once()
+            assert response.status_code == 200
+            assert response.json() == expected
+
     def test_openapi(self) -> None:
         expected = {
             "openapi": "3.1.0",
@@ -115,7 +136,51 @@ class TestRoutes:
                             },
                         },
                     }
-                }
+                },
+                "/get-all-file-names": {
+                    "get": {
+                        "summary": "Get All File Names",
+                        "description": "Get all sheets associated with the user",
+                        "operationId": "get_all_file_names_get_all_file_names_get",
+                        "parameters": [
+                            {
+                                "name": "user_id",
+                                "in": "query",
+                                "required": True,
+                                "schema": {
+                                    "type": "integer",
+                                    "description": "The user ID for which the data is requested",
+                                    "title": "User Id",
+                                },
+                                "description": "The user ID for which the data is requested",
+                            }
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Successful Response",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "additionalProperties": {"type": "string"},
+                                            "title": "Response Get All File Names Get All File Names Get",
+                                        }
+                                    }
+                                },
+                            },
+                            "422": {
+                                "description": "Validation Error",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/HTTPValidationError"
+                                        }
+                                    }
+                                },
+                            },
+                        },
+                    }
+                },
             },
             "components": {
                 "schemas": {
