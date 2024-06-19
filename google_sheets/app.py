@@ -87,6 +87,33 @@ def _get_sheet(service: Any, spreadsheet_id: str, range: str) -> Any:
     return values
 
 
+async def list_sheets(user_id: int) -> List[Any]:
+    user_credentials = await load_user_credentials(user_id)
+    sheets_credentials: Dict[str, str] = {
+        "refresh_token": user_credentials["refresh_token"],
+        "client_id": oauth2_settings["clientId"],
+        "client_secret": oauth2_settings["clientSecret"],
+    }
+
+    creds = Credentials.from_authorized_user_info(  # type: ignore[no-untyped-call]
+        info=sheets_credentials,
+        scopes=[
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive.metadata.readonly",
+        ],
+    )
+    service = build("drive", "v3", credentials=creds)
+
+    # Call the Drive v3 API
+    results = (
+        service.files()
+        .list(pageSize=10, fields="nextPageToken, files(id, name)")
+        .execute()
+    )
+    items = results.get("files", [])
+    return items  # type: ignore[no-any-return]
+
+
 @app.get("/sheet", description="Get data from a Google Sheet")
 async def get_sheet(
     user_id: Annotated[
@@ -109,3 +136,13 @@ async def get_sheet(
         return "No data found."
 
     return values  # type: ignore[no-any-return]
+
+
+@app.get("/all", description="Get all sheets associated with the user")
+async def get_all_file_names(
+    user_id: Annotated[
+        int, Query(description="The user ID for which the data is requested")
+    ],
+) -> List[Any]:
+    files = await list_sheets(user_id=user_id)
+    return files

@@ -17,4 +17,4 @@ htmlcov
 token
 .DS_Store
 
-client_secret.json
+client_secret*.json
