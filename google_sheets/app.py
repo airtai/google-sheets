@@ -1,16 +1,13 @@
-import datetime
 import json
 import logging
 from os import environ
 from pathlib import Path
 from typing import Annotated, Any, Dict, List, Union
 
-import python_weather
 from asyncify import asyncify
 from fastapi import FastAPI, HTTPException, Query
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from pydantic import BaseModel
 
 from . import __version__
 from .db_helpers import get_db_connection, get_wasp_db_url
@@ -27,7 +24,7 @@ base_url = (
 )
 
 app = FastAPI(
-    servers=[{"url": base_url, "description": "Weather app server"}],
+    servers=[{"url": base_url, "description": "Google Sheets app server"}],
     version=__version__,
     title="google-sheets",
 )
@@ -44,60 +41,6 @@ oauth2_settings = {
     "clientSecret": client_secret_data["web"]["client_secret"],
     "redirectUri": client_secret_data["web"]["redirect_uris"][0],
 }
-
-
-class HourlyForecast(BaseModel):
-    forecast_time: datetime.time
-    temperature: int
-    description: str
-
-
-class DailyForecast(BaseModel):
-    forecast_date: datetime.date
-    temperature: int
-    hourly_forecasts: List[HourlyForecast]
-
-
-class Weather(BaseModel):
-    city: str
-    temperature: int
-    daily_forecasts: List[DailyForecast]
-
-
-@app.get("/", description="Get weather forecast for a given city")
-async def get_weather(
-    city: Annotated[str, Query(description="city for which forecast is requested")],
-) -> Weather:
-    async with python_weather.Client(unit=python_weather.METRIC) as client:
-        # fetch a weather forecast from a city
-        weather = await client.get(city)
-
-        daily_forecasts = []
-        # get the weather forecast for a few days
-        for daily in weather.daily_forecasts:
-            hourly_forecasts = [
-                HourlyForecast(
-                    forecast_time=hourly.time,
-                    temperature=hourly.temperature,
-                    description=hourly.description,
-                )
-                for hourly in daily.hourly_forecasts
-            ]
-            daily_forecasts.append(
-                DailyForecast(
-                    forecast_date=daily.date,
-                    temperature=daily.temperature,
-                    hourly_forecasts=hourly_forecasts,
-                )
-            )
-
-        weather_response = Weather(
-            city=city,
-            temperature=weather.temperature,
-            daily_forecasts=daily_forecasts,
-            hourly_forecasts=hourly_forecasts,
-        )
-    return weather_response
 
 
 async def get_user(user_id: Union[int, str]) -> Any:
