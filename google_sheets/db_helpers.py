@@ -27,8 +27,10 @@ async def get_db_connection(
 
 async def get_db_url(db_name: str) -> str:
     curr_db_url = environ.get("DATABASE_URL")
-    wasp_db_name = environ.get("WASP_DB_NAME", db_name)
-    wasp_db_url = curr_db_url.replace(curr_db_url.split("/")[-1], wasp_db_name)  # type: ignore[union-attr]
-    if "connect_timeout" not in wasp_db_url:
-        wasp_db_url += "?connect_timeout=60"
-    return wasp_db_url
+    if db_name == "waspdb":
+        db_name = environ.get("WASP_DB_NAME", db_name)
+    db_url = curr_db_url.replace(curr_db_url.split("/")[-1], db_name)  # type: ignore[union-attr]
+    if "connect_timeout" not in db_url:
+        db_url += "?connect_timeout=60"
+
+    return db_url
