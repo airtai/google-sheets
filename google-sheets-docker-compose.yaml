@@ -9,6 +9,8 @@ services:
       - "8001:8000"
     environment:
       - DOMAIN=${DOMAIN}
+      - DATABASE_URL=${DATABASE_URL}
+      - CLIENT_SECRET=${CLIENT_SECRET}
     networks:
       - google-sheets
 
