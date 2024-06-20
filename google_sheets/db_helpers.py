@@ -25,7 +25,7 @@ async def get_db_connection(
         await db.disconnect()
 
 
-async def get_wasp_db_url() -> str:
+def get_wasp_db_url() -> str:
     curr_db_url = environ.get("DATABASE_URL")
     wasp_db_name = environ.get("WASP_DB_NAME", "waspdb")
     wasp_db_url = curr_db_url.replace(curr_db_url.split("/")[-1], wasp_db_name)  # type: ignore[union-attr]

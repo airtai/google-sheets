@@ -45,7 +45,7 @@ oauth2_settings = {
 
 
 async def get_user(user_id: Union[int, str]) -> Any:
-    wasp_db_url = await get_wasp_db_url()
+    wasp_db_url = get_wasp_db_url()
     async with get_db_connection(db_url=wasp_db_url) as db:
         user = await db.query_first(
             f'SELECT * from "User" where id={user_id}'  # nosec: [B608]
