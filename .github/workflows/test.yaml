@@ -235,9 +235,11 @@ jobs:
     needs: [check]
     if: github.ref_name == 'main' || github.ref_name == 'dev'
     env:
+      CLIENT_SECRET: ${{ github.ref_name == 'main' && secrets.PROD_CLIENT_SECRET || secrets.STAGING_CLIENT_SECRET }}
+      DATABASE_URL: ${{ github.ref_name == 'main' && secrets.PROD_DATABASE_URL || secrets.STAGING_DATABASE_URL }}
       GITHUB_USERNAME: ${{ github.actor }}
       GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-      DEVELOPER_TOKEN: ${{ secrets.DEVELOPER_TOKEN }}
+      # DEVELOPER_TOKEN: ${{ secrets.DEVELOPER_TOKEN }}
       DOMAIN: ${{ github.ref_name == 'main' && vars.PROD_DOMAIN || vars.STAGING_DOMAIN }}
       SSH_KEY: ${{ github.ref_name == 'main' && secrets.PROD_SSH_KEY || secrets.STAGING_SSH_KEY }}
     steps:
