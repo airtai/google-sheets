@@ -32,11 +32,11 @@ $ssh_command "docker logs $container_name >> $log_file 2>&1 || echo 'No containe
 $ssh_command "if [ \$(stat -c%s \"$log_file\") -ge 1073741824 ]; then echo 'Log file size exceeds 1GB, trimming...'; tail -c 1073741824 \"$log_file\" > \"$log_file.tmp\" && mv \"$log_file.tmp\" \"$log_file\"; fi"
 
 echo "INFO: stopping already running docker containers"
-$ssh_command "export PORT='$PORT' && docker compose down || echo 'No containers available to stop'"
+$ssh_command "export PORT='$PORT' && docker compose -f google-sheets-docker-compose.yaml down || echo 'No containers available to stop'"
 $ssh_command "docker container prune -f || echo 'No stopped containers to delete'"
 
-echo "INFO: SCPing docker-compose.yaml"
-scp -i key.pem ./docker-compose.yaml azureuser@$DOMAIN:/home/azureuser/docker-compose.yaml
+echo "INFO: SCPing google-sheets-docker-compose.yaml"
+scp -i key.pem ./google-sheets-docker-compose.yaml azureuser@$DOMAIN:/home/azureuser/google-sheets-docker-compose.yaml
 
 echo "INFO: pulling docker image"
 $ssh_command "echo $GITHUB_PASSWORD | docker login -u '$GITHUB_USERNAME' --password-stdin '$REGISTRY'"
@@ -50,4 +50,4 @@ echo "INFO: starting docker containers"
 
 $ssh_command "export GITHUB_REPOSITORY='$GITHUB_REPOSITORY' TAG='$TAG' container_name='$container_name' \
 	DOMAIN='$DOMAIN' \
-	&& docker compose up -d"
+	&& docker compose -f google-sheets-docker-compose.yaml up -d"
