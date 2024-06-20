@@ -95,6 +95,11 @@ async def get_login_url(
     return {"login_url": markdown_url}
 
 
+@app.get("/login/success")
+async def get_login_success() -> Dict[str, str]:
+    return {"login_success": "You have successfully logged in"}
+
+
 # Route 2: Save user credentials/token to a JSON file
 @app.get("/login/callback")
 async def login_callback(
@@ -102,7 +107,6 @@ async def login_callback(
 ) -> RedirectResponse:
     chat_id = state
     user_id, chat_uuid = await get_user_id_chat_uuid_from_chat_id(chat_id)
-    # user_id, chat_id = await get_user_id_chat_id_from_conversation(conv_id)
     user = await get_user(user_id=user_id)
 
     token_request_data = {
@@ -145,10 +149,12 @@ async def login_callback(
             },
         )
 
-    redirect_domain = environ.get("REDIRECT_DOMAIN", "https://captn.ai")
-    logged_in_message = "I have successfully logged in"
-    redirect_uri = f"{redirect_domain}/chat/{chat_uuid}?msg={logged_in_message}"
-    return RedirectResponse(redirect_uri)
+    # redirect_domain = environ.get("REDIRECT_DOMAIN", "https://captn.ai")
+    # logged_in_message = "I have successfully logged in"
+    # redirect_uri = f"{redirect_domain}/chat/{chat_uuid}?msg={logged_in_message}"
+    # return RedirectResponse(redirect_uri)
+    # redirect to success page
+    return RedirectResponse(url=f"{base_url}/login/success")
 
 
 async def get_user(user_id: Union[int, str]) -> Any:

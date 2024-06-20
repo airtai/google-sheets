@@ -63,6 +63,122 @@ class TestRoutes:
                 }
             ],
             "paths": {
+                "/login": {
+                    "get": {
+                        "summary": "Get Login Url",
+                        "operationId": "get_login_url_login_get",
+                        "parameters": [
+                            {
+                                "name": "user_id",
+                                "in": "query",
+                                "required": True,
+                                "schema": {"type": "integer", "title": "User ID"},
+                            },
+                            {
+                                "name": "conv_id",
+                                "in": "query",
+                                "required": True,
+                                "schema": {
+                                    "type": "integer",
+                                    "title": "Conversation ID",
+                                },
+                            },
+                            {
+                                "name": "force_new_login",
+                                "in": "query",
+                                "required": False,
+                                "schema": {
+                                    "type": "boolean",
+                                    "title": "Force new login",
+                                    "default": False,
+                                },
+                            },
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Successful Response",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "additionalProperties": {"type": "string"},
+                                            "title": "Response Get Login Url Login Get",
+                                        }
+                                    }
+                                },
+                            },
+                            "422": {
+                                "description": "Validation Error",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/HTTPValidationError"
+                                        }
+                                    }
+                                },
+                            },
+                        },
+                    }
+                },
+                "/login/success": {
+                    "get": {
+                        "summary": "Get Login Success",
+                        "operationId": "get_login_success_login_success_get",
+                        "responses": {
+                            "200": {
+                                "description": "Successful Response",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "additionalProperties": {"type": "string"},
+                                            "type": "object",
+                                            "title": "Response Get Login Success Login Success Get",
+                                        }
+                                    }
+                                },
+                            }
+                        },
+                    }
+                },
+                "/login/callback": {
+                    "get": {
+                        "summary": "Login Callback",
+                        "operationId": "login_callback_login_callback_get",
+                        "parameters": [
+                            {
+                                "name": "code",
+                                "in": "query",
+                                "required": True,
+                                "schema": {
+                                    "type": "string",
+                                    "title": "Authorization Code",
+                                },
+                            },
+                            {
+                                "name": "state",
+                                "in": "query",
+                                "required": True,
+                                "schema": {"type": "string", "title": "State"},
+                            },
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Successful Response",
+                                "content": {"application/json": {"schema": {}}},
+                            },
+                            "422": {
+                                "description": "Validation Error",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/HTTPValidationError"
+                                        }
+                                    }
+                                },
+                            },
+                        },
+                    }
+                },
                 "/sheet": {
                     "get": {
                         "summary": "Get Sheet",
