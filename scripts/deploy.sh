@@ -12,6 +12,8 @@ check_variable "TAG"
 check_variable "GITHUB_USERNAME"
 check_variable "GITHUB_PASSWORD"
 check_variable "DOMAIN"
+check_variable "CLIENT_SECRET"
+check_variable "DATABASE_URL"
 
 
 if [ ! -f key.pem ]; then
