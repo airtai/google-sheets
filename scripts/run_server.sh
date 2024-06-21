@@ -2,7 +2,7 @@
 
 cat <<< "$CLIENT_SECRET" > client_secret.json
 
-# ToDo: Uncomment the below line once we have project specific migrations
+# ToDo: Uncomment the following line when we create a NEW database
 # prisma migrate deploy
 prisma generate
 
