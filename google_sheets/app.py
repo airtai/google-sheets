@@ -14,7 +14,7 @@ from googleapiclient.discovery import build
 from prisma.errors import RecordNotFoundError
 
 from . import __version__
-from .db_helpers import get_db_connection, get_db_url
+from .db_helpers import get_db_connection, get_wasp_db_url
 
 __all__ = ["app"]
 
@@ -50,7 +50,7 @@ oauth2_settings = {
 async def get_user_id_chat_uuid_from_chat_id(
     chat_id: Union[int, str],
 ) -> Tuple[int, str]:
-    wasp_db_url = await get_db_url(db_name="waspdb")
+    wasp_db_url = get_wasp_db_url()
     async with get_db_connection(db_url=wasp_db_url) as db:
         chat = await db.query_first(
             f'SELECT * from "Chat" where id={chat_id}'  # nosec: [B608]
@@ -158,7 +158,7 @@ async def login_callback(
 
 
 async def get_user(user_id: Union[int, str]) -> Any:
-    wasp_db_url = await get_db_url(db_name="waspdb")
+    wasp_db_url = get_wasp_db_url()
     async with get_db_connection(db_url=wasp_db_url) as db:
         user = await db.query_first(
             f'SELECT * from "User" where id={user_id}'  # nosec: [B608]
