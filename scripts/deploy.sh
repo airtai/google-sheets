@@ -12,6 +12,7 @@ check_variable "TAG"
 check_variable "GITHUB_USERNAME"
 check_variable "GITHUB_PASSWORD"
 check_variable "DOMAIN"
+check_variable "REDIRECT_DOMAIN"
 check_variable "CLIENT_SECRET"
 check_variable "DATABASE_URL"
 
@@ -51,5 +52,5 @@ $ssh_command "docker system prune -f || echo 'No images to delete'"
 echo "INFO: starting docker containers"
 
 $ssh_command "export GITHUB_REPOSITORY='$GITHUB_REPOSITORY' TAG='$TAG' container_name='$container_name' \
-	DATABASE_URL='$DATABASE_URL' CLIENT_SECRET='$CLIENT_SECRET' DOMAIN='$DOMAIN' \
+	DATABASE_URL='$DATABASE_URL' CLIENT_SECRET='$CLIENT_SECRET' DOMAIN='$DOMAIN' REDIRECT_DOMAIN='$REDIRECT_DOMAIN' \
 	&& docker compose -f google-sheets-docker-compose.yaml up -d"
