@@ -75,15 +75,6 @@ class TestRoutes:
                                 "schema": {"type": "integer", "title": "User ID"},
                             },
                             {
-                                "name": "conv_id",
-                                "in": "query",
-                                "required": True,
-                                "schema": {
-                                    "type": "integer",
-                                    "title": "Conversation ID",
-                                },
-                            },
-                            {
                                 "name": "force_new_login",
                                 "in": "query",
                                 "required": False,
