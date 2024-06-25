@@ -7,7 +7,7 @@ from typing import Annotated, Any, Dict, List, Union
 
 import httpx
 from asyncify import asyncify
-from fastapi import FastAPI, HTTPException, Query, Request, Response
+from fastapi import FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -206,9 +206,23 @@ async def get_sheet(
     return values  # type: ignore[no-any-return]
 
 
-# @asyncify  # type: ignore[misc]
-# def _create_sheet(spreadsheet_request: Any) -> None:
-#     spreadsheet_request.execute()
+@asyncify  # type: ignore[misc]
+def _create_sheet(service: Any, spreadsheet_id: str, title: str) -> None:
+    body = {
+        "requests": [
+            {
+                "addSheet": {
+                    "properties": {
+                        "title": title,
+                    }
+                }
+            }
+        ]
+    }
+    request = service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id, body=body
+    )
+    request.execute()
 
 
 @app.post(
@@ -228,37 +242,25 @@ async def create_sheet(
     ],
 ) -> Response:
     service = await _build_service(user_id=user_id, service_name="sheets", version="v4")
-    body = {
-        "requests": [
-            {
-                "addSheet": {
-                    "properties": {
-                        "title": title,
-                    }
-                }
-            }
-        ]
-    }
-    request = service.spreadsheets().batchUpdate(
-        spreadsheetId=spreadsheet_id, body=body
-    )
     try:
-        request.execute()
+        await _create_sheet(service=service, spreadsheet_id=spreadsheet_id, title=title)
     except HttpError as e:
         if (
-            e.status_code == 400
+            e.status_code == status.HTTP_400_BAD_REQUEST
             and f'A sheet with the name "{title}" already exists' in e._get_reason()
         ):
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f'A sheet with the name "{title}" already exists. Please enter another name.',
             ) from e
         raise HTTPException(status_code=e.status_code, detail=e._get_reason()) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        ) from e
 
     return Response(
-        status_code=201,
+        status_code=status.HTTP_201_CREATED,
         content=f"Sheet with the name '{title}' has been created successfully.",
     )
 
