@@ -7,10 +7,11 @@ from typing import Annotated, Any, Dict, List, Union
 
 import httpx
 from asyncify import asyncify
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import RedirectResponse
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from prisma.errors import RecordNotFoundError
 
 from . import __version__
@@ -203,6 +204,63 @@ async def get_sheet(
         return "No data found."
 
     return values  # type: ignore[no-any-return]
+
+
+# @asyncify  # type: ignore[misc]
+# def _create_sheet(spreadsheet_request: Any) -> None:
+#     spreadsheet_request.execute()
+
+
+@app.post(
+    "/create-sheet",
+    description="Create a new Google Sheet within the existing spreadsheet",
+)
+async def create_sheet(
+    user_id: Annotated[
+        int, Query(description="The user ID for which the data is requested")
+    ],
+    spreadsheet_id: Annotated[
+        str, Query(description="ID of the Google Sheet to fetch data from")
+    ],
+    title: Annotated[
+        str,
+        Query(description="The title of the new sheet"),
+    ],
+) -> Response:
+    service = await _build_service(user_id=user_id, service_name="sheets", version="v4")
+    body = {
+        "requests": [
+            {
+                "addSheet": {
+                    "properties": {
+                        "title": title,
+                    }
+                }
+            }
+        ]
+    }
+    request = service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id, body=body
+    )
+    try:
+        request.execute()
+    except HttpError as e:
+        if (
+            e.status_code == 400
+            and f'A sheet with the name "{title}" already exists' in e._get_reason()
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=f'A sheet with the name "{title}" already exists. Please enter another name.',
+            ) from e
+        raise HTTPException(status_code=e.status_code, detail=e._get_reason()) from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return Response(
+        status_code=201,
+        content=f"Sheet with the name '{title}' has been created successfully.",
+    )
 
 
 @asyncify  # type: ignore[misc]
