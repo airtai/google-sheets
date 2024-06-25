@@ -244,6 +244,64 @@ class TestRoutes:
                         },
                     }
                 },
+                "/create-sheet": {
+                    "post": {
+                        "summary": "Create Sheet",
+                        "description": "Create a new Google Sheet within the existing spreadsheet",
+                        "operationId": "create_sheet_create_sheet_post",
+                        "parameters": [
+                            {
+                                "name": "user_id",
+                                "in": "query",
+                                "required": True,
+                                "schema": {
+                                    "type": "integer",
+                                    "description": "The user ID for which the data is requested",
+                                    "title": "User Id",
+                                },
+                                "description": "The user ID for which the data is requested",
+                            },
+                            {
+                                "name": "spreadsheet_id",
+                                "in": "query",
+                                "required": True,
+                                "schema": {
+                                    "type": "string",
+                                    "description": "ID of the Google Sheet to fetch data from",
+                                    "title": "Spreadsheet Id",
+                                },
+                                "description": "ID of the Google Sheet to fetch data from",
+                            },
+                            {
+                                "name": "title",
+                                "in": "query",
+                                "required": True,
+                                "schema": {
+                                    "type": "string",
+                                    "description": "The title of the new sheet",
+                                    "title": "Title",
+                                },
+                                "description": "The title of the new sheet",
+                            },
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Successful Response",
+                                "content": {"application/json": {"schema": {}}},
+                            },
+                            "422": {
+                                "description": "Validation Error",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/HTTPValidationError"
+                                        }
+                                    }
+                                },
+                            },
+                        },
+                    }
+                },
                 "/get-all-file-names": {
                     "get": {
                         "summary": "Get All File Names",
