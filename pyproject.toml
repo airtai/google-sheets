@@ -66,15 +66,15 @@ lint = [
     "types-Pygments",
     "types-docutils",
     "mypy==1.10.0",
-    "ruff==0.4.9",
+    "ruff==0.4.10",
     "pyupgrade-directories==0.3.0",
     "bandit==1.7.9",
-    "semgrep==1.75.0",
+    "semgrep==1.77.0",
     "pytest-mypy-plugins==3.1.2",
 ]
 
 test-core = [
-    "coverage[toml]==7.5.3",
+    "coverage[toml]==7.5.4",
     "pytest==8.2.2",
     "pytest-asyncio==0.23.7",
 ]
