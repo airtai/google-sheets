@@ -21,8 +21,9 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
 
 RUN python3 -m pip install --upgrade pip
 
-COPY weatherapi ./weatherapi
-COPY scripts/* pyproject.toml README.md ./
+COPY google_sheets ./google_sheets
+COPY migrations ./migrations
+COPY scripts/* schema.prisma pyproject.toml README.md ./
 RUN pip install -e ".[dev]"
 
 EXPOSE ${PORT}

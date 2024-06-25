@@ -1,2 +1,2 @@
-# Weather API
-A simple weather API made for usage with FastAgency
+# Google Sheets API
+A simple Google Sheets API made for usage with FastAgency

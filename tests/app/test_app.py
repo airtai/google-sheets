@@ -1,64 +1,89 @@
-import datetime
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from weatherapi import __version__ as version
-from weatherapi.app import app
+from google_sheets import __version__ as version
+from google_sheets.app import app
 
 client = TestClient(app)
 
 
 class TestRoutes:
-    def test_weather_route(self) -> None:
-        response = client.get("/?city=Chennai")
-        assert response.status_code == 200
-        resp_json = response.json()
-        assert resp_json.get("city") == "Chennai"
-        assert resp_json.get("temperature") > 0
+    def test_get_sheet(self) -> None:
+        with patch(
+            "google_sheets.app.load_user_credentials",
+            return_value={"refresh_token": "abcdf"},
+        ) as mock_load_user_credentials:
+            excepted = [
+                ["Campaign", "Ad Group", "Keyword"],
+                ["Campaign A", "Ad group A", "Keyword A"],
+                ["Campaign A", "Ad group A", "Keyword B"],
+                ["Campaign A", "Ad group A", "Keyword C"],
+            ]
+            with patch(
+                "google_sheets.app._get_sheet", return_value=excepted
+            ) as mock_get_sheet:
+                response = client.get(
+                    "/sheet?user_id=123&spreadsheet_id=abc&range=Sheet1"
+                )
+                mock_load_user_credentials.assert_called_once()
+                mock_get_sheet.assert_called_once()
+                assert response.status_code == 200
+                assert response.json() == excepted
 
-        assert len(resp_json.get("daily_forecasts")) > 0
-        daily_forecasts = resp_json.get("daily_forecasts")
-        assert isinstance(daily_forecasts, list)
-
-        first_daily_forecast = daily_forecasts[0]
-        assert (
-            first_daily_forecast.get("forecast_date")
-            == datetime.date.today().isoformat()
-        )
-        assert first_daily_forecast.get("temperature") > 0
-        assert len(first_daily_forecast.get("hourly_forecasts")) > 0
-
-        first_hourly_forecast = first_daily_forecast.get("hourly_forecasts")[0]
-        assert isinstance(first_hourly_forecast, dict)
-        assert first_hourly_forecast.get("forecast_time") is not None
-        assert first_hourly_forecast.get("temperature") > 0  # type: ignore
-        assert first_hourly_forecast.get("description") is not None
+    def test_get_all_file_names(self) -> None:
+        with (
+            patch(
+                "google_sheets.app.load_user_credentials",
+                return_value={"refresh_token": "abcdf"},
+            ) as mock_load_user_credentials,
+            patch(
+                "google_sheets.app._get_files",
+                return_value=[
+                    {"id": "abc", "name": "file1"},
+                    {"id": "def", "name": "file2"},
+                ],
+            ) as mock_get_files,
+        ):
+            expected = {"abc": "file1", "def": "file2"}
+            response = client.get("/get-all-file-names?user_id=123")
+            mock_load_user_credentials.assert_called_once()
+            mock_get_files.assert_called_once()
+            assert response.status_code == 200
+            assert response.json() == expected
 
     def test_openapi(self) -> None:
         expected = {
             "openapi": "3.1.0",
-            "info": {"title": "WeatherAPI", "version": version},
+            "info": {"title": "google-sheets", "version": version},
             "servers": [
-                {"url": "http://localhost:8000", "description": "Weather app server"}
+                {
+                    "url": "http://localhost:8000",
+                    "description": "Google Sheets app server",
+                }
             ],
             "paths": {
-                "/": {
+                "/login": {
                     "get": {
-                        "summary": "Get Weather",
-                        "operationId": "get_weather__get",
-                        "description": "Get weather forecast for a given city",
+                        "summary": "Get Login Url",
+                        "operationId": "get_login_url_login_get",
                         "parameters": [
                             {
-                                "name": "city",
+                                "name": "user_id",
                                 "in": "query",
-                                "description": "city for which forecast is requested",
                                 "required": True,
+                                "schema": {"type": "integer", "title": "User ID"},
+                            },
+                            {
+                                "name": "force_new_login",
+                                "in": "query",
+                                "required": False,
                                 "schema": {
-                                    "type": "string",
-                                    "title": "City",
-                                    "description": "city for which forecast is requested",
+                                    "type": "boolean",
+                                    "title": "Force new login",
+                                    "default": False,
                                 },
-                            }
+                            },
                         ],
                         "responses": {
                             "200": {
@@ -66,7 +91,9 @@ class TestRoutes:
                                 "content": {
                                     "application/json": {
                                         "schema": {
-                                            "$ref": "#/components/schemas/Weather"
+                                            "type": "object",
+                                            "additionalProperties": {"type": "string"},
+                                            "title": "Response Get Login Url Login Get",
                                         }
                                     }
                                 },
@@ -83,34 +110,187 @@ class TestRoutes:
                             },
                         },
                     }
-                }
+                },
+                "/login/success": {
+                    "get": {
+                        "summary": "Get Login Success",
+                        "operationId": "get_login_success_login_success_get",
+                        "responses": {
+                            "200": {
+                                "description": "Successful Response",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "additionalProperties": {"type": "string"},
+                                            "type": "object",
+                                            "title": "Response Get Login Success Login Success Get",
+                                        }
+                                    }
+                                },
+                            }
+                        },
+                    }
+                },
+                "/login/callback": {
+                    "get": {
+                        "summary": "Login Callback",
+                        "operationId": "login_callback_login_callback_get",
+                        "parameters": [
+                            {
+                                "name": "code",
+                                "in": "query",
+                                "required": True,
+                                "schema": {
+                                    "type": "string",
+                                    "title": "Authorization Code",
+                                },
+                            },
+                            {
+                                "name": "state",
+                                "in": "query",
+                                "required": True,
+                                "schema": {"type": "string", "title": "State"},
+                            },
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Successful Response",
+                                "content": {"application/json": {"schema": {}}},
+                            },
+                            "422": {
+                                "description": "Validation Error",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/HTTPValidationError"
+                                        }
+                                    }
+                                },
+                            },
+                        },
+                    }
+                },
+                "/sheet": {
+                    "get": {
+                        "summary": "Get Sheet",
+                        "description": "Get data from a Google Sheet",
+                        "operationId": "get_sheet_sheet_get",
+                        "parameters": [
+                            {
+                                "name": "user_id",
+                                "in": "query",
+                                "required": True,
+                                "schema": {
+                                    "type": "integer",
+                                    "description": "The user ID for which the data is requested",
+                                    "title": "User Id",
+                                },
+                                "description": "The user ID for which the data is requested",
+                            },
+                            {
+                                "name": "spreadsheet_id",
+                                "in": "query",
+                                "required": True,
+                                "schema": {
+                                    "type": "string",
+                                    "description": "ID of the Google Sheet to fetch data from",
+                                    "title": "Spreadsheet Id",
+                                },
+                                "description": "ID of the Google Sheet to fetch data from",
+                            },
+                            {
+                                "name": "range",
+                                "in": "query",
+                                "required": True,
+                                "schema": {
+                                    "type": "string",
+                                    "description": "The range of cells to fetch data from. E.g. 'Sheet1!A1:B2'",
+                                    "title": "Range",
+                                },
+                                "description": "The range of cells to fetch data from. E.g. 'Sheet1!A1:B2'",
+                            },
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Successful Response",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "anyOf": [
+                                                {"type": "string"},
+                                                {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "array",
+                                                        "items": {"type": "string"},
+                                                    },
+                                                },
+                                            ],
+                                            "title": "Response Get Sheet Sheet Get",
+                                        }
+                                    }
+                                },
+                            },
+                            "422": {
+                                "description": "Validation Error",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/HTTPValidationError"
+                                        }
+                                    }
+                                },
+                            },
+                        },
+                    }
+                },
+                "/get-all-file-names": {
+                    "get": {
+                        "summary": "Get All File Names",
+                        "description": "Get all sheets associated with the user",
+                        "operationId": "get_all_file_names_get_all_file_names_get",
+                        "parameters": [
+                            {
+                                "name": "user_id",
+                                "in": "query",
+                                "required": True,
+                                "schema": {
+                                    "type": "integer",
+                                    "description": "The user ID for which the data is requested",
+                                    "title": "User Id",
+                                },
+                                "description": "The user ID for which the data is requested",
+                            }
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Successful Response",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "additionalProperties": {"type": "string"},
+                                            "title": "Response Get All File Names Get All File Names Get",
+                                        }
+                                    }
+                                },
+                            },
+                            "422": {
+                                "description": "Validation Error",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/HTTPValidationError"
+                                        }
+                                    }
+                                },
+                            },
+                        },
+                    }
+                },
             },
             "components": {
                 "schemas": {
-                    "DailyForecast": {
-                        "properties": {
-                            "forecast_date": {
-                                "type": "string",
-                                "format": "date",
-                                "title": "Forecast Date",
-                            },
-                            "temperature": {"type": "integer", "title": "Temperature"},
-                            "hourly_forecasts": {
-                                "items": {
-                                    "$ref": "#/components/schemas/HourlyForecast"
-                                },
-                                "type": "array",
-                                "title": "Hourly Forecasts",
-                            },
-                        },
-                        "type": "object",
-                        "required": [
-                            "forecast_date",
-                            "temperature",
-                            "hourly_forecasts",
-                        ],
-                        "title": "DailyForecast",
-                    },
                     "HTTPValidationError": {
                         "properties": {
                             "detail": {
@@ -123,20 +303,6 @@ class TestRoutes:
                         },
                         "type": "object",
                         "title": "HTTPValidationError",
-                    },
-                    "HourlyForecast": {
-                        "properties": {
-                            "forecast_time": {
-                                "type": "string",
-                                "format": "time",
-                                "title": "Forecast Time",
-                            },
-                            "temperature": {"type": "integer", "title": "Temperature"},
-                            "description": {"type": "string", "title": "Description"},
-                        },
-                        "type": "object",
-                        "required": ["forecast_time", "temperature", "description"],
-                        "title": "HourlyForecast",
                     },
                     "ValidationError": {
                         "properties": {
@@ -153,20 +319,6 @@ class TestRoutes:
                         "type": "object",
                         "required": ["loc", "msg", "type"],
                         "title": "ValidationError",
-                    },
-                    "Weather": {
-                        "properties": {
-                            "city": {"type": "string", "title": "City"},
-                            "temperature": {"type": "integer", "title": "Temperature"},
-                            "daily_forecasts": {
-                                "items": {"$ref": "#/components/schemas/DailyForecast"},
-                                "type": "array",
-                                "title": "Daily Forecasts",
-                            },
-                        },
-                        "type": "object",
-                        "required": ["city", "temperature", "daily_forecasts"],
-                        "title": "Weather",
                     },
                 }
             },

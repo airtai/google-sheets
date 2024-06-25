@@ -15,10 +15,10 @@ Provide a clear and concise description of the problem you've encountered. For e
 Clearly and concisely describe the desired outcome or solution.
 
 **Feature code example**
-To help others understand the proposed feature, illustrate it with a **weatherapi** code example:
+To help others understand the proposed feature, illustrate it with a **google-sheets** code example:
 
 ```python
-from weatherapi.app import app
+from google_sheets.app import app
 ...
 ```
 

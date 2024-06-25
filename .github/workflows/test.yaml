@@ -29,11 +29,11 @@ jobs:
           pip install -e ".[docs,lint]"
       - name: Run mypy
         shell: bash
-        run: mypy weatherapi tests
+        run: mypy google_sheets tests
 
       - name: Run bandit
         shell: bash
-        run: bandit -c pyproject.toml -r weatherapi
+        run: bandit -c pyproject.toml -r google_sheets
 
       - name: Run Semgrep
         shell: bash
@@ -70,7 +70,10 @@ jobs:
         if: matrix.pydantic-version == 'pydantic-v2'
         run: pip install --pre "pydantic>=2,<3"
       - run: mkdir coverage
-
+      - name: Create client secrets file
+        run: echo '{"web":{"client_id":"dummy.apps.googleusercontent.com","project_id":"dummy-id","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_secret":"dummy-secret","redirect_uris":["http://localhost:9000/login/callback"]}}' > client_secret.json
+      - name: Prisma generate
+        run: prisma generate
       - name: Test
         run: bash scripts/test.sh
         env:
@@ -98,6 +101,10 @@ jobs:
       - name: Install Dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         run: pip install .[docs,testing]
+      - name: Create client secrets file
+        run: echo '{"web":{"client_id":"dummy.apps.googleusercontent.com","project_id":"dummy-id","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_secret":"dummy-secret","redirect_uris":["http://localhost:9000/login/callback"]}}' > client_secret.json
+      - name: Prisma generate
+        run: prisma generate
       - name: Test
         run: bash scripts/test.sh
 
@@ -116,6 +123,10 @@ jobs:
       - name: Install Dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         run: pip install .[docs,testing]
+      - name: Create client secrets file
+        run: echo '{"web":{"client_id":"dummy.apps.googleusercontent.com","project_id":"dummy-id","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_secret":"dummy-secret","redirect_uris":["http://localhost:9000/login/callback"]}}' > client_secret.json
+      - name: Prisma generate
+        run: prisma generate
       - name: Test
         run: bash scripts/test.sh
 
@@ -146,7 +157,7 @@ jobs:
       - run: ls -la coverage
       - run: coverage combine coverage
       - run: coverage report
-      - run: coverage html --show-contexts --title "weatherapi coverage for ${{ github.sha }}"
+      - run: coverage html --show-contexts --title "google-sheets coverage for ${{ github.sha }}"
 
       - name: Store coverage html
         uses: actions/upload-artifact@v4
@@ -224,10 +235,13 @@ jobs:
     needs: [check]
     if: github.ref_name == 'main' || github.ref_name == 'dev'
     env:
+      CLIENT_SECRET: ${{ github.ref_name == 'main' && secrets.PROD_CLIENT_SECRET || secrets.STAGING_CLIENT_SECRET }}
+      DATABASE_URL: ${{ github.ref_name == 'main' && secrets.PROD_DATABASE_URL || secrets.STAGING_DATABASE_URL }}
       GITHUB_USERNAME: ${{ github.actor }}
       GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-      DEVELOPER_TOKEN: ${{ secrets.DEVELOPER_TOKEN }}
+      # DEVELOPER_TOKEN: ${{ secrets.DEVELOPER_TOKEN }}
       DOMAIN: ${{ github.ref_name == 'main' && vars.PROD_DOMAIN || vars.STAGING_DOMAIN }}
+      REDIRECT_DOMAIN: ${{ github.ref_name == 'main' && vars.PROD_REDIRECT_DOMAIN || vars.STAGING_REDIRECT_DOMAIN }}
       SSH_KEY: ${{ github.ref_name == 'main' && secrets.PROD_SSH_KEY || secrets.STAGING_SSH_KEY }}
     steps:
       - uses: actions/checkout@v3 # Don't change it to cheackout@v4. V4 is not working with container image.

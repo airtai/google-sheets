@@ -28,5 +28,5 @@ pip install --editable ".[dev]" \
 # and specify the package to run on explicitly.
 # Note that we do not use --ignore-missing-imports,
 # as this can give us false confidence in our results.
-# mypy weatherapi
+# mypy google-sheets
 ./scripts/lint.sh
