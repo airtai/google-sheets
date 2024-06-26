@@ -1,6 +1,9 @@
-from unittest.mock import patch
+from typing import Optional, Union
+from unittest.mock import MagicMock, patch
 
+import pytest
 from fastapi.testclient import TestClient
+from googleapiclient.errors import HttpError
 
 from google_sheets import __version__ as version
 from google_sheets.app import app
@@ -32,6 +35,51 @@ class TestGetSheet:
                 assert response.json() == excepted
 
 
+class TestCreateSheet:
+    @staticmethod
+    def _create_http_error_mock(reason: str, status: int) -> HttpError:
+        resp = MagicMock()
+        resp.reason = reason
+        resp.status = status
+
+        return HttpError(resp=resp, content=b"")
+
+    @pytest.mark.parametrize(
+        ("side_effect", "expected_status_code"),
+        [
+            (None, 201),
+            (
+                _create_http_error_mock(
+                    'A sheet with the name "Sheet2" already exists', 400
+                ),
+                400,
+            ),
+            (_create_http_error_mock("Bad Request", 400), 400),
+            (Exception("Some error"), 500),
+        ],
+    )
+    def test_create_sheet(
+        self,
+        side_effect: Optional[Union[HttpError, Exception]],
+        expected_status_code: int,
+    ) -> None:
+        with (
+            patch(
+                "google_sheets.app.load_user_credentials",
+                return_value={"refresh_token": "abcdf"},
+            ) as mock_load_user_credentials,
+            patch(
+                "google_sheets.app._create_sheet", side_effect=[side_effect]
+            ) as mock_create_sheet,
+        ):
+            response = client.post(
+                "/create-sheet?user_id=123&spreadsheet_id=abc&title=Sheet2"
+            )
+            mock_load_user_credentials.assert_called_once()
+            mock_create_sheet.assert_called_once()
+            assert response.status_code == expected_status_code
+
+
 class TestGetAllFileNames:
     def test_get_all_file_names(self) -> None:
         with (
@@ -55,7 +103,7 @@ class TestGetAllFileNames:
             assert response.json() == expected
 
 
-class TestRoutes:
+class TestOpenAPIJSON:
     def test_openapi(self) -> None:
         expected = {
             "openapi": "3.1.0",
