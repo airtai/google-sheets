@@ -6,6 +6,7 @@ from .oauth_settings import (
 from .service import (
     build_service,
     create_sheet_f,
+    get_all_sheet_titles_f,
     get_files_f,
     get_sheet_f,
     update_sheet_f,
@@ -14,6 +15,7 @@ from .service import (
 __all__ = [
     "build_service",
     "create_sheet_f",
+    "get_all_sheet_titles_f",
     "get_files_f",
     "get_google_oauth_url",
     "get_sheet_f",

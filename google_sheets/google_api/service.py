@@ -13,6 +13,7 @@ from .oauth_settings import oauth2_settings
 __all__ = [
     "build_service",
     "create_sheet_f",
+    "get_all_sheet_titles_f",
     "get_files_f",
     "get_sheet_f",
     "update_sheet_f",
@@ -112,3 +113,10 @@ def create_sheet_f(service: Any, spreadsheet_id: str, title: str) -> None:
         spreadsheetId=spreadsheet_id, body=body
     )
     request.execute()
+
+
+@asyncify  # type: ignore[misc]
+def get_all_sheet_titles_f(service: Any, spreadsheet_id: str) -> List[str]:
+    sheet_metadata = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+    sheets = sheet_metadata.get("sheets", "")
+    return [sheet["properties"]["title"] for sheet in sheets]

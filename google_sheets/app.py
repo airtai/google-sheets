@@ -13,6 +13,7 @@ from .db_helpers import get_db_connection
 from .google_api import (
     build_service,
     create_sheet_f,
+    get_all_sheet_titles_f,
     get_files_f,
     get_google_oauth_url,
     get_sheet_f,
@@ -238,3 +239,29 @@ async def get_all_file_names(
     # create dict where key is id and value is name
     files_dict = {file["id"]: file["name"] for file in files}
     return files_dict
+
+
+@app.get(
+    "/get-all-sheet-titles",
+    description="Get all sheet titles within a Google Spreadsheet",
+)
+async def get_all_sheet_titles(
+    user_id: Annotated[
+        int, Query(description="The user ID for which the data is requested")
+    ],
+    spreadsheet_id: Annotated[
+        str, Query(description="ID of the Google Sheet to fetch data from")
+    ],
+) -> List[str]:
+    service = await build_service(user_id=user_id, service_name="sheets", version="v4")
+    try:
+        sheets = await get_all_sheet_titles_f(
+            service=service, spreadsheet_id=spreadsheet_id
+        )
+    except HttpError as e:
+        raise HTTPException(status_code=e.status_code, detail=e._get_reason()) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        ) from e
+    return sheets

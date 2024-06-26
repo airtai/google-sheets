@@ -80,6 +80,28 @@ class TestCreateSheet:
             assert response.status_code == expected_status_code
 
 
+class TestGetAllSheetTitles:
+    def test_get_all_sheet_titles(self) -> None:
+        with (
+            patch(
+                "google_sheets.google_api.service._load_user_credentials",
+                return_value={"refresh_token": "abcdf"},
+            ) as mock_load_user_credentials,
+            patch(
+                "google_sheets.app.get_all_sheet_titles_f",
+                return_value=["Sheet1", "Sheet2"],
+            ) as mock_get_all_sheet_titles,
+        ):
+            expected = ["Sheet1", "Sheet2"]
+            response = client.get(
+                "/get-all-sheet-titles?user_id=123&spreadsheet_id=abc"
+            )
+            mock_load_user_credentials.assert_called_once()
+            mock_get_all_sheet_titles.assert_called_once()
+            assert response.status_code == 200
+            assert response.json() == expected
+
+
 class TestUpdateSheet:
     @pytest.mark.parametrize(
         ("side_effect", "expected_status_code"),
