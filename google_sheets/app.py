@@ -1,20 +1,25 @@
 import json
 import logging
 from os import environ
-from typing import Annotated, Any, Dict, List, Union
+from typing import Annotated, Dict, List, Union
 
 import httpx
-from asyncify import asyncify
 from fastapi import FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from prisma.errors import RecordNotFoundError
 
 from . import __version__
 from .db_helpers import get_db_connection
-from .google_api import get_google_oauth_url, get_token_request_data, oauth2_settings
+from .google_api import (
+    build_service,
+    create_sheet_f,
+    get_files_f,
+    get_google_oauth_url,
+    get_sheet_f,
+    get_token_request_data,
+    oauth2_settings,
+    update_sheet_f,
+)
 from .model import GoogleSheetValues
 
 __all__ = ["app"]
@@ -117,47 +122,6 @@ async def login_callback(
     return RedirectResponse(url=f"{base_url}/login/success")
 
 
-async def load_user_credentials(user_id: Union[int, str]) -> Any:
-    async with get_db_connection() as db:
-        try:
-            data = await db.gauth.find_unique_or_raise(where={"user_id": user_id})  # type: ignore[typeddict-item]
-        except RecordNotFoundError as e:
-            raise HTTPException(
-                status_code=404, detail="User hasn't grant access yet!"
-            ) from e
-
-    return data.creds
-
-
-async def _build_service(user_id: int, service_name: str, version: str) -> Any:
-    user_credentials = await load_user_credentials(user_id)
-    sheets_credentials: Dict[str, str] = {
-        "refresh_token": user_credentials["refresh_token"],
-        "client_id": oauth2_settings["clientId"],
-        "client_secret": oauth2_settings["clientSecret"],
-    }
-
-    creds = Credentials.from_authorized_user_info(  # type: ignore[no-untyped-call]
-        info=sheets_credentials,
-        scopes=[
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive.metadata.readonly",
-        ],
-    )
-    service = build(serviceName=service_name, version=version, credentials=creds)
-    return service
-
-
-@asyncify  # type: ignore[misc]
-def _get_sheet(service: Any, spreadsheet_id: str, range: str) -> Any:
-    # Call the Sheets API
-    sheet = service.spreadsheets()
-    result = sheet.values().get(spreadsheetId=spreadsheet_id, range=range).execute()
-    values = result.get("values", [])
-
-    return values
-
-
 @app.get("/get-sheet", description="Get data from a Google Sheet")
 async def get_sheet(
     user_id: Annotated[
@@ -171,8 +135,8 @@ async def get_sheet(
         Query(description="The range of cells to fetch data from. E.g. 'Sheet1!A1:B2'"),
     ],
 ) -> Union[str, List[List[str]]]:
-    service = await _build_service(user_id=user_id, service_name="sheets", version="v4")
-    values = await _get_sheet(
+    service = await build_service(user_id=user_id, service_name="sheets", version="v4")
+    values = await get_sheet_f(
         service=service, spreadsheet_id=spreadsheet_id, range=range
     )
 
@@ -180,25 +144,6 @@ async def get_sheet(
         return "No data found."
 
     return values  # type: ignore[no-any-return]
-
-
-@asyncify  # type: ignore[misc]
-def _update_sheet(
-    service: Any, spreadsheet_id: str, range: str, sheet_values: GoogleSheetValues
-) -> None:
-    # Values are intended to be a 2d array.
-    # They should be in the form of [[ 'a', 'b', 'c'], [ 1, 2, 3 ]]
-    request = (
-        service.spreadsheets()
-        .values()
-        .update(
-            spreadsheetId=spreadsheet_id,
-            valueInputOption="RAW",
-            range=range,
-            body={"majorDimension": "ROWS", "values": sheet_values.values},
-        )
-    )
-    request.execute()
 
 
 @app.post(
@@ -218,10 +163,10 @@ async def update_sheet(
     ],
     sheet_values: GoogleSheetValues,
 ) -> Response:
-    service = await _build_service(user_id=user_id, service_name="sheets", version="v4")
+    service = await build_service(user_id=user_id, service_name="sheets", version="v4")
 
     try:
-        await _update_sheet(
+        await update_sheet_f(
             service=service,
             spreadsheet_id=spreadsheet_id,
             range=title,
@@ -240,25 +185,6 @@ async def update_sheet(
     )
 
 
-@asyncify  # type: ignore[misc]
-def _create_sheet(service: Any, spreadsheet_id: str, title: str) -> None:
-    body = {
-        "requests": [
-            {
-                "addSheet": {
-                    "properties": {
-                        "title": title,
-                    }
-                }
-            }
-        ]
-    }
-    request = service.spreadsheets().batchUpdate(
-        spreadsheetId=spreadsheet_id, body=body
-    )
-    request.execute()
-
-
 @app.post(
     "/create-sheet",
     description="Create a new Google Sheet within the existing spreadsheet",
@@ -275,9 +201,11 @@ async def create_sheet(
         Query(description="The title of the new sheet"),
     ],
 ) -> Response:
-    service = await _build_service(user_id=user_id, service_name="sheets", version="v4")
+    service = await build_service(user_id=user_id, service_name="sheets", version="v4")
     try:
-        await _create_sheet(service=service, spreadsheet_id=spreadsheet_id, title=title)
+        await create_sheet_f(
+            service=service, spreadsheet_id=spreadsheet_id, title=title
+        )
     except HttpError as e:
         if (
             e.status_code == status.HTTP_400_BAD_REQUEST
@@ -299,30 +227,14 @@ async def create_sheet(
     )
 
 
-@asyncify  # type: ignore[misc]
-def _get_files(service: Any) -> List[Dict[str, str]]:
-    # Call the Drive v3 API
-    results = (
-        service.files()
-        .list(
-            q="mimeType='application/vnd.google-apps.spreadsheet'",
-            pageSize=100,  # The default value is 100
-            fields="nextPageToken, files(id, name)",
-        )
-        .execute()
-    )
-    items = results.get("files", [])
-    return items  # type: ignore[no-any-return]
-
-
 @app.get("/get-all-file-names", description="Get all sheets associated with the user")
 async def get_all_file_names(
     user_id: Annotated[
         int, Query(description="The user ID for which the data is requested")
     ],
 ) -> Dict[str, str]:
-    service = await _build_service(user_id=user_id, service_name="drive", version="v3")
-    files: List[Dict[str, str]] = await _get_files(service=service)
+    service = await build_service(user_id=user_id, service_name="drive", version="v3")
+    files: List[Dict[str, str]] = await get_files_f(service=service)
     # create dict where key is id and value is name
     files_dict = {file["id"]: file["name"] for file in files}
     return files_dict

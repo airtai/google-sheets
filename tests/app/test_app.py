@@ -14,7 +14,7 @@ client = TestClient(app)
 class TestGetSheet:
     def test_get_sheet(self) -> None:
         with patch(
-            "google_sheets.app.load_user_credentials",
+            "google_sheets.google_api.service._load_user_credentials",
             return_value={"refresh_token": "abcdf"},
         ) as mock_load_user_credentials:
             excepted = [
@@ -24,7 +24,7 @@ class TestGetSheet:
                 ["Campaign A", "Ad group A", "Keyword C"],
             ]
             with patch(
-                "google_sheets.app._get_sheet", return_value=excepted
+                "google_sheets.app.get_sheet_f", return_value=excepted
             ) as mock_get_sheet:
                 response = client.get(
                     "/get-sheet?user_id=123&spreadsheet_id=abc&range=Sheet1"
@@ -65,11 +65,11 @@ class TestCreateSheet:
     ) -> None:
         with (
             patch(
-                "google_sheets.app.load_user_credentials",
+                "google_sheets.google_api.service._load_user_credentials",
                 return_value={"refresh_token": "abcdf"},
             ) as mock_load_user_credentials,
             patch(
-                "google_sheets.app._create_sheet", side_effect=[side_effect]
+                "google_sheets.app.create_sheet_f", side_effect=[side_effect]
             ) as mock_create_sheet,
         ):
             response = client.post(
@@ -96,11 +96,11 @@ class TestUpdateSheet:
     ) -> None:
         with (
             patch(
-                "google_sheets.app.load_user_credentials",
+                "google_sheets.google_api.service._load_user_credentials",
                 return_value={"refresh_token": "abcdf"},
             ) as mock_load_user_credentials,
             patch(
-                "google_sheets.app._update_sheet", side_effect=[side_effect]
+                "google_sheets.app.update_sheet_f", side_effect=[side_effect]
             ) as mock_update_sheet,
         ):
             json_data = {
@@ -119,11 +119,11 @@ class TestGetAllFileNames:
     def test_get_all_file_names(self) -> None:
         with (
             patch(
-                "google_sheets.app.load_user_credentials",
+                "google_sheets.google_api.service._load_user_credentials",
                 return_value={"refresh_token": "abcdf"},
             ) as mock_load_user_credentials,
             patch(
-                "google_sheets.app._get_files",
+                "google_sheets.app.get_files_f",
                 return_value=[
                     {"id": "abc", "name": "file1"},
                     {"id": "def", "name": "file2"},
