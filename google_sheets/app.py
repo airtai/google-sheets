@@ -208,20 +208,21 @@ async def get_sheet(
 
 
 @asyncify  # type: ignore[misc]
-def _create_sheet(service: Any, spreadsheet_id: str, title: str) -> None:
-    body = {
-        "requests": [
-            {
-                "addSheet": {
-                    "properties": {
-                        "title": title,
-                    }
-                }
-            }
-        ]
-    }
-    request = service.spreadsheets().batchUpdate(
-        spreadsheetId=spreadsheet_id, body=body
+def _update_sheet(
+    service: Any, spreadsheet_id: str, range: str, sheet_data: Dict[Any, Any]
+) -> None:
+    # Values are intended to be a 2d array.
+    # They should be in the form of [[ 'a', 'b', 'c'], [ 1, 2, 3 ]]
+    values = [list(sheet_data.keys()), list(sheet_data.values())]
+    request = (
+        service.spreadsheets()
+        .values()
+        .update(
+            spreadsheetId=spreadsheet_id,
+            valueInputOption="RAW",
+            range=range,
+            body={"majorDimension": "ROWS", "values": values},
+        )
     )
     request.execute()
 
@@ -249,15 +250,12 @@ async def update_sheet(
     service = await _build_service(user_id=user_id, service_name="sheets", version="v4")
 
     try:
-        # Values are intended to be a 2d array.
-        # They should be in the form of [[ 'a', 'b', 'c'], [ 1, 2, 3 ]]
-        values = [list(sheet_data.keys()), list(sheet_data.values())]
-        service.spreadsheets().values().update(
-            spreadsheetId=spreadsheet_id,
-            valueInputOption="RAW",
+        await _update_sheet(
+            service=service,
+            spreadsheet_id=spreadsheet_id,
             range=title,
-            body={"majorDimension": "ROWS", "values": values},
-        ).execute()
+            sheet_data=sheet_data,
+        )
     except HttpError as e:
         raise HTTPException(status_code=e.status_code, detail=e._get_reason()) from e
     except Exception as e:
@@ -269,6 +267,25 @@ async def update_sheet(
         status_code=status.HTTP_200_OK,
         content=f"Sheet with the name '{title}' has been updated successfully.",
     )
+
+
+@asyncify  # type: ignore[misc]
+def _create_sheet(service: Any, spreadsheet_id: str, title: str) -> None:
+    body = {
+        "requests": [
+            {
+                "addSheet": {
+                    "properties": {
+                        "title": title,
+                    }
+                }
+            }
+        ]
+    }
+    request = service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id, body=body
+    )
+    request.execute()
 
 
 @app.post(
