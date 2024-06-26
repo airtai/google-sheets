@@ -13,6 +13,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from prisma.errors import RecordNotFoundError
+from pydantic import Json
 
 from . import __version__
 from .db_helpers import get_db_connection
@@ -223,6 +224,51 @@ def _create_sheet(service: Any, spreadsheet_id: str, title: str) -> None:
         spreadsheetId=spreadsheet_id, body=body
     )
     request.execute()
+
+
+@app.post(
+    "/update-sheet",
+    description="Update data in a Google Sheet within the existing spreadsheet",
+)
+async def update_sheet(
+    user_id: Annotated[
+        int, Query(description="The user ID for which the data is requested")
+    ],
+    spreadsheet_id: Annotated[
+        str, Query(description="ID of the Google Sheet to fetch data from")
+    ],
+    title: Annotated[
+        str,
+        Query(description="The title of the sheet to update"),
+    ],
+    sheet_data: Annotated[
+        Json[Any],
+        Query(description="The data to update in the sheet. Must be a valid JSON data"),
+    ],
+) -> Response:
+    service = await _build_service(user_id=user_id, service_name="sheets", version="v4")
+
+    try:
+        # Values are intended to be a 2d array.
+        # They should be in the form of [[ 'a', 'b', 'c'], [ 1, 2, 3 ]]
+        values = [list(sheet_data.keys()), list(sheet_data.values())]
+        service.spreadsheets().values().update(
+            spreadsheetId=spreadsheet_id,
+            valueInputOption="RAW",
+            range=title,
+            body={"majorDimension": "ROWS", "values": values},
+        ).execute()
+    except HttpError as e:
+        raise HTTPException(status_code=e.status_code, detail=e._get_reason()) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        ) from e
+
+    return Response(
+        status_code=status.HTTP_200_OK,
+        content=f"Sheet with the name '{title}' has been updated successfully.",
+    )
 
 
 @app.post(
