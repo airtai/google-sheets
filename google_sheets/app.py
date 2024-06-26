@@ -182,7 +182,7 @@ def _get_sheet(service: Any, spreadsheet_id: str, range: str) -> Any:
     return values
 
 
-@app.get("/sheet", description="Get data from a Google Sheet")
+@app.get("/get-sheet", description="Get data from a Google Sheet")
 async def get_sheet(
     user_id: Annotated[
         int, Query(description="The user ID for which the data is requested")

@@ -8,7 +8,7 @@ from google_sheets.app import app
 client = TestClient(app)
 
 
-class TestRoutes:
+class TestGetSheet:
     def test_get_sheet(self) -> None:
         with patch(
             "google_sheets.app.load_user_credentials",
@@ -24,13 +24,15 @@ class TestRoutes:
                 "google_sheets.app._get_sheet", return_value=excepted
             ) as mock_get_sheet:
                 response = client.get(
-                    "/sheet?user_id=123&spreadsheet_id=abc&range=Sheet1"
+                    "/get-sheet?user_id=123&spreadsheet_id=abc&range=Sheet1"
                 )
                 mock_load_user_credentials.assert_called_once()
                 mock_get_sheet.assert_called_once()
                 assert response.status_code == 200
                 assert response.json() == excepted
 
+
+class TestGetAllFileNames:
     def test_get_all_file_names(self) -> None:
         with (
             patch(
@@ -52,6 +54,8 @@ class TestRoutes:
             assert response.status_code == 200
             assert response.json() == expected
 
+
+class TestRoutes:
     def test_openapi(self) -> None:
         expected = {
             "openapi": "3.1.0",
@@ -170,7 +174,7 @@ class TestRoutes:
                         },
                     }
                 },
-                "/sheet": {
+                "/get-sheet": {
                     "get": {
                         "summary": "Get Sheet",
                         "description": "Get data from a Google Sheet",
