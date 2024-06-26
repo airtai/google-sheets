@@ -1,8 +1,6 @@
 import json
 import logging
-import urllib.parse
 from os import environ
-from pathlib import Path
 from typing import Annotated, Any, Dict, List, Union
 
 import httpx
@@ -16,6 +14,7 @@ from prisma.errors import RecordNotFoundError
 
 from . import __version__
 from .db_helpers import get_db_connection
+from .google_api import get_google_oauth_url, get_token_request_data, oauth2_settings
 from .model import GoogleSheetValues
 
 __all__ = ["app"]
@@ -34,19 +33,6 @@ app = FastAPI(
     version=__version__,
     title="google-sheets",
 )
-
-# Load client secret data from the JSON file
-with Path("client_secret.json").open() as secret_file:
-    client_secret_data = json.load(secret_file)
-
-# OAuth2 configuration
-oauth2_settings = {
-    "auth_uri": client_secret_data["web"]["auth_uri"],
-    "tokenUrl": client_secret_data["web"]["token_uri"],
-    "clientId": client_secret_data["web"]["client_id"],
-    "clientSecret": client_secret_data["web"]["client_secret"],
-    "redirectUri": client_secret_data["web"]["redirect_uris"][0],
-}
 
 
 async def is_authenticated_for_ads(user_id: int) -> bool:
@@ -70,12 +56,7 @@ async def get_login_url(
         if is_authenticated:
             return {"login_url": "User is already authenticated"}
 
-    google_oauth_url = (
-        f"{oauth2_settings['auth_uri']}?client_id={oauth2_settings['clientId']}"
-        f"&redirect_uri={oauth2_settings['redirectUri']}&response_type=code"
-        f"&scope={urllib.parse.quote_plus('email https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.metadata.readonly')}"
-        f"&access_type=offline&prompt=consent&state={user_id}"
-    )
+    google_oauth_url = get_google_oauth_url(user_id)
     markdown_url = f"To navigate Google Ads waters, I require access to your account. Please [click here]({google_oauth_url}) to grant permission."
     return {"login_url": markdown_url}
 
@@ -94,13 +75,7 @@ async def login_callback(
         raise HTTPException(status_code=400, detail="User ID must be an integer")
     user_id = int(state)
 
-    token_request_data = {
-        "code": code,
-        "client_id": oauth2_settings["clientId"],
-        "client_secret": oauth2_settings["clientSecret"],
-        "redirect_uri": oauth2_settings["redirectUri"],
-        "grant_type": "authorization_code",
-    }
+    token_request_data = get_token_request_data(code)
 
     async with httpx.AsyncClient() as client:
         response = await client.post(
