@@ -80,36 +80,39 @@ class TestCreateSheet:
             assert response.status_code == expected_status_code
 
 
-# class TestUpdateSheet:
-#     @pytest.mark.parametrize(
-#         ("side_effect", "expected_status_code"),
-#         [
-#             (None, 200),
-#             # (_create_http_error_mock("Bad Request", 400), 400),
-#             # (Exception("Some error"), 500),
-#         ],
-#     )
-#     def test_update_sheet(
-#         self,
-#         side_effect: Optional[Union[HttpError, Exception]],
-#         expected_status_code: int,
-#     ) -> None:
-#         with (
-#             patch(
-#                 "google_sheets.app.load_user_credentials",
-#                 return_value={"refresh_token": "abcdf"},
-#             ) as mock_load_user_credentials,
-#             patch(
-#                 "google_sheets.app._update_sheet", side_effect=[side_effect]
-#             ) as mock_update_sheet,
-#         ):
-#             response = client.post(
-#                 "/update-sheet?user_id=123&spreadsheet_id=abc&range=Sheet1!A1:B2",
-#                 json=[["Campaign", "Ad Group"], ["Campaign A", "Ad group A"]],
-#             )
-#             mock_load_user_credentials.assert_called_once()
-#             mock_update_sheet.assert_called_once()
-#             assert response.status_code == expected_status_code
+class TestUpdateSheet:
+    @pytest.mark.parametrize(
+        ("side_effect", "expected_status_code"),
+        [
+            (None, 200),
+            (_create_http_error_mock("Bad Request", 400), 400),
+            (Exception("Some error"), 500),
+        ],
+    )
+    def test_update_sheet(
+        self,
+        side_effect: Optional[Union[HttpError, Exception]],
+        expected_status_code: int,
+    ) -> None:
+        with (
+            patch(
+                "google_sheets.app.load_user_credentials",
+                return_value={"refresh_token": "abcdf"},
+            ) as mock_load_user_credentials,
+            patch(
+                "google_sheets.app._update_sheet", side_effect=[side_effect]
+            ) as mock_update_sheet,
+        ):
+            json_data = {
+                "values": [["Campaign", "Ad Group"], ["Campaign A", "Ad group A"]]
+            }
+            response = client.post(
+                "/update-sheet?user_id=123&spreadsheet_id=abc&title=Sheet1",
+                json=json_data,
+            )
+            mock_load_user_credentials.assert_called_once()
+            mock_update_sheet.assert_called_once()
+            assert response.status_code == expected_status_code
 
 
 class TestGetAllFileNames:
@@ -258,7 +261,7 @@ class TestOpenAPIJSON:
                     "get": {
                         "summary": "Get Sheet",
                         "description": "Get data from a Google Sheet",
-                        "operationId": "get_sheet_sheet_get",
+                        "operationId": "get_sheet_get_sheet_get",
                         "parameters": [
                             {
                                 "name": "user_id",
@@ -310,10 +313,78 @@ class TestOpenAPIJSON:
                                                     },
                                                 },
                                             ],
-                                            "title": "Response Get Sheet Sheet Get",
+                                            "title": "Response Get Sheet Get Sheet Get",
                                         }
                                     }
                                 },
+                            },
+                            "422": {
+                                "description": "Validation Error",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/HTTPValidationError"
+                                        }
+                                    }
+                                },
+                            },
+                        },
+                    }
+                },
+                "/update-sheet": {
+                    "post": {
+                        "summary": "Update Sheet",
+                        "description": "Update data in a Google Sheet within the existing spreadsheet",
+                        "operationId": "update_sheet_update_sheet_post",
+                        "parameters": [
+                            {
+                                "name": "user_id",
+                                "in": "query",
+                                "required": True,
+                                "schema": {
+                                    "type": "integer",
+                                    "description": "The user ID for which the data is requested",
+                                    "title": "User Id",
+                                },
+                                "description": "The user ID for which the data is requested",
+                            },
+                            {
+                                "name": "spreadsheet_id",
+                                "in": "query",
+                                "required": True,
+                                "schema": {
+                                    "type": "string",
+                                    "description": "ID of the Google Sheet to fetch data from",
+                                    "title": "Spreadsheet Id",
+                                },
+                                "description": "ID of the Google Sheet to fetch data from",
+                            },
+                            {
+                                "name": "title",
+                                "in": "query",
+                                "required": True,
+                                "schema": {
+                                    "type": "string",
+                                    "description": "The title of the sheet to update",
+                                    "title": "Title",
+                                },
+                                "description": "The title of the sheet to update",
+                            },
+                        ],
+                        "requestBody": {
+                            "required": True,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "$ref": "#/components/schemas/GoogleSheetValues"
+                                    }
+                                }
+                            },
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "Successful Response",
+                                "content": {"application/json": {"schema": {}}},
                             },
                             "422": {
                                 "description": "Validation Error",
@@ -433,6 +504,19 @@ class TestOpenAPIJSON:
             },
             "components": {
                 "schemas": {
+                    "GoogleSheetValues": {
+                        "properties": {
+                            "values": {
+                                "items": {"items": {}, "type": "array"},
+                                "type": "array",
+                                "title": "Values",
+                                "description": "Values to be written to the Google Sheet.",
+                            }
+                        },
+                        "type": "object",
+                        "required": ["values"],
+                        "title": "GoogleSheetValues",
+                    },
                     "HTTPValidationError": {
                         "properties": {
                             "detail": {
