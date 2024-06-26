@@ -131,14 +131,14 @@ async def get_sheet(
     spreadsheet_id: Annotated[
         str, Query(description="ID of the Google Sheet to fetch data from")
     ],
-    range: Annotated[
+    title: Annotated[
         str,
-        Query(description="The range of cells to fetch data from. E.g. 'Sheet1!A1:B2'"),
+        Query(description="The title of the sheet to fetch data from"),
     ],
 ) -> Union[str, List[List[str]]]:
     service = await build_service(user_id=user_id, service_name="sheets", version="v4")
     values = await get_sheet_f(
-        service=service, spreadsheet_id=spreadsheet_id, range=range
+        service=service, spreadsheet_id=spreadsheet_id, range=title
     )
 
     if not values:

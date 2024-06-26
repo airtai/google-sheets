@@ -27,7 +27,7 @@ class TestGetSheet:
                 "google_sheets.app.get_sheet_f", return_value=excepted
             ) as mock_get_sheet:
                 response = client.get(
-                    "/get-sheet?user_id=123&spreadsheet_id=abc&range=Sheet1"
+                    "/get-sheet?user_id=123&spreadsheet_id=abc&title=Sheet1"
                 )
                 mock_load_user_credentials.assert_called_once()
                 mock_get_sheet.assert_called_once()
@@ -308,15 +308,15 @@ class TestOpenAPIJSON:
                                 "description": "ID of the Google Sheet to fetch data from",
                             },
                             {
-                                "name": "range",
+                                "name": "title",
                                 "in": "query",
                                 "required": True,
                                 "schema": {
                                     "type": "string",
-                                    "description": "The range of cells to fetch data from. E.g. 'Sheet1!A1:B2'",
-                                    "title": "Range",
+                                    "description": "The title of the sheet to fetch data from",
+                                    "title": "Title",
                                 },
-                                "description": "The range of cells to fetch data from. E.g. 'Sheet1!A1:B2'",
+                                "description": "The title of the sheet to fetch data from",
                             },
                         ],
                         "responses": {
@@ -506,6 +506,61 @@ class TestOpenAPIJSON:
                                             "type": "object",
                                             "additionalProperties": {"type": "string"},
                                             "title": "Response Get All File Names Get All File Names Get",
+                                        }
+                                    }
+                                },
+                            },
+                            "422": {
+                                "description": "Validation Error",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/HTTPValidationError"
+                                        }
+                                    }
+                                },
+                            },
+                        },
+                    }
+                },
+                "/get-all-sheet-titles": {
+                    "get": {
+                        "summary": "Get All Sheet Titles",
+                        "description": "Get all sheet titles within a Google Spreadsheet",
+                        "operationId": "get_all_sheet_titles_get_all_sheet_titles_get",
+                        "parameters": [
+                            {
+                                "name": "user_id",
+                                "in": "query",
+                                "required": True,
+                                "schema": {
+                                    "type": "integer",
+                                    "description": "The user ID for which the data is requested",
+                                    "title": "User Id",
+                                },
+                                "description": "The user ID for which the data is requested",
+                            },
+                            {
+                                "name": "spreadsheet_id",
+                                "in": "query",
+                                "required": True,
+                                "schema": {
+                                    "type": "string",
+                                    "description": "ID of the Google Sheet to fetch data from",
+                                    "title": "Spreadsheet Id",
+                                },
+                                "description": "ID of the Google Sheet to fetch data from",
+                            },
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Successful Response",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "array",
+                                            "items": {"type": "string"},
+                                            "title": "Response Get All Sheet Titles Get All Sheet Titles Get",
                                         }
                                     }
                                 },
