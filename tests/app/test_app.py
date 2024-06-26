@@ -35,15 +35,15 @@ class TestGetSheet:
                 assert response.json() == excepted
 
 
+def _create_http_error_mock(reason: str, status: int) -> HttpError:
+    resp = MagicMock()
+    resp.reason = reason
+    resp.status = status
+
+    return HttpError(resp=resp, content=b"")
+
+
 class TestCreateSheet:
-    @staticmethod
-    def _create_http_error_mock(reason: str, status: int) -> HttpError:
-        resp = MagicMock()
-        resp.reason = reason
-        resp.status = status
-
-        return HttpError(resp=resp, content=b"")
-
     @pytest.mark.parametrize(
         ("side_effect", "expected_status_code"),
         [
@@ -78,6 +78,38 @@ class TestCreateSheet:
             mock_load_user_credentials.assert_called_once()
             mock_create_sheet.assert_called_once()
             assert response.status_code == expected_status_code
+
+
+# class TestUpdateSheet:
+#     @pytest.mark.parametrize(
+#         ("side_effect", "expected_status_code"),
+#         [
+#             (None, 200),
+#             # (_create_http_error_mock("Bad Request", 400), 400),
+#             # (Exception("Some error"), 500),
+#         ],
+#     )
+#     def test_update_sheet(
+#         self,
+#         side_effect: Optional[Union[HttpError, Exception]],
+#         expected_status_code: int,
+#     ) -> None:
+#         with (
+#             patch(
+#                 "google_sheets.app.load_user_credentials",
+#                 return_value={"refresh_token": "abcdf"},
+#             ) as mock_load_user_credentials,
+#             patch(
+#                 "google_sheets.app._update_sheet", side_effect=[side_effect]
+#             ) as mock_update_sheet,
+#         ):
+#             response = client.post(
+#                 "/update-sheet?user_id=123&spreadsheet_id=abc&range=Sheet1!A1:B2",
+#                 json=[["Campaign", "Ad Group"], ["Campaign A", "Ad group A"]],
+#             )
+#             mock_load_user_credentials.assert_called_once()
+#             mock_update_sheet.assert_called_once()
+#             assert response.status_code == expected_status_code
 
 
 class TestGetAllFileNames:

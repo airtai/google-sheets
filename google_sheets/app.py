@@ -13,10 +13,10 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from prisma.errors import RecordNotFoundError
-from pydantic import Json
 
 from . import __version__
 from .db_helpers import get_db_connection
+from .model import GoogleSheetValues
 
 __all__ = ["app"]
 
@@ -209,11 +209,10 @@ async def get_sheet(
 
 @asyncify  # type: ignore[misc]
 def _update_sheet(
-    service: Any, spreadsheet_id: str, range: str, sheet_data: Dict[Any, Any]
+    service: Any, spreadsheet_id: str, range: str, sheet_values: GoogleSheetValues
 ) -> None:
     # Values are intended to be a 2d array.
     # They should be in the form of [[ 'a', 'b', 'c'], [ 1, 2, 3 ]]
-    values = [list(sheet_data.keys()), list(sheet_data.values())]
     request = (
         service.spreadsheets()
         .values()
@@ -221,7 +220,7 @@ def _update_sheet(
             spreadsheetId=spreadsheet_id,
             valueInputOption="RAW",
             range=range,
-            body={"majorDimension": "ROWS", "values": values},
+            body={"majorDimension": "ROWS", "values": sheet_values.values},
         )
     )
     request.execute()
@@ -242,10 +241,7 @@ async def update_sheet(
         str,
         Query(description="The title of the sheet to update"),
     ],
-    sheet_data: Annotated[
-        Json[Any],
-        Query(description="The data to update in the sheet. Must be a valid JSON data"),
-    ],
+    sheet_values: GoogleSheetValues,
 ) -> Response:
     service = await _build_service(user_id=user_id, service_name="sheets", version="v4")
 
@@ -254,7 +250,7 @@ async def update_sheet(
             service=service,
             spreadsheet_id=spreadsheet_id,
             range=title,
-            sheet_data=sheet_data,
+            sheet_values=sheet_values,
         )
     except HttpError as e:
         raise HTTPException(status_code=e.status_code, detail=e._get_reason()) from e
