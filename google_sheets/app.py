@@ -136,7 +136,7 @@ async def get_sheet(
         str,
         Query(description="The title of the sheet to fetch data from"),
     ],
-) -> Union[str, List[List[str]]]:
+) -> Union[str, GoogleSheetValues]:
     service = await build_service(user_id=user_id, service_name="sheets", version="v4")
     values = await get_sheet_f(
         service=service, spreadsheet_id=spreadsheet_id, range=title
@@ -145,7 +145,7 @@ async def get_sheet(
     if not values:
         return "No data found."
 
-    return values  # type: ignore[no-any-return]
+    return GoogleSheetValues(values=values)
 
 
 @app.post(
@@ -376,3 +376,43 @@ async def process_data(
         )
 
     return _process_data(template_df, new_campaign_df)
+
+
+# process-spreadsheet endpoint
+# input: user_id, template_spreadsheet_id, template_sheet_title, new_campaign_spreadsheet_id, new_campaign_sheet_title, target_resource
+
+
+# output: new sheet within the new_campaign_spreadsheet_id with the processed data and 201 status code
+@app.post(
+    "/process-spreadsheet",
+    description="Process data to generate new ads or keywords based on the template",
+)
+async def process_spreadsheet(
+    user_id: Annotated[
+        int, Query(description="The user ID for which the data is requested")
+    ],
+    template_spreadsheet_id: Annotated[
+        str, Query(description="ID of the Google Sheet with the template data")
+    ],
+    template_sheet_title: Annotated[
+        str,
+        Query(description="The title of the sheet with the template data"),
+    ],
+    new_campaign_spreadsheet_id: Annotated[
+        str, Query(description="ID of the Google Sheet with the new campaign data")
+    ],
+    new_campaign_sheet_title: Annotated[
+        str,
+        Query(description="The title of the sheet with the new campaign data"),
+    ],
+    target_resource: Annotated[
+        Literal["ad", "keyword"], Query(description="The target resource to be updated")
+    ],
+) -> Response:
+    # service = await build_service(user_id=user_id, service_name="sheets", version="v4")
+
+    # try:
+    #     template_values = await get_sheet(user_id=user_id, spreadsheet_id=template_spreadsheet_id, title=template_sheet_title)
+    #     new_campaign_values = await get_sheet(user_id=user_id, spreadsheet_id=new_campaign_spreadsheet_id, title=new_campaign_sheet_title)
+
+    raise NotImplementedError("This endpoint is not implemented yet.")

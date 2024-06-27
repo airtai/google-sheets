@@ -7,6 +7,7 @@ from googleapiclient.errors import HttpError
 
 from google_sheets import __version__ as version
 from google_sheets.app import app
+from google_sheets.model import GoogleSheetValues
 
 client = TestClient(app)
 
@@ -17,14 +18,14 @@ class TestGetSheet:
             "google_sheets.google_api.service._load_user_credentials",
             return_value={"refresh_token": "abcdf"},
         ) as mock_load_user_credentials:
-            excepted = [
+            values = [
                 ["Campaign", "Ad Group", "Keyword"],
                 ["Campaign A", "Ad group A", "Keyword A"],
                 ["Campaign A", "Ad group A", "Keyword B"],
                 ["Campaign A", "Ad group A", "Keyword C"],
             ]
             with patch(
-                "google_sheets.app.get_sheet_f", return_value=excepted
+                "google_sheets.app.get_sheet_f", return_value=values
             ) as mock_get_sheet:
                 response = client.get(
                     "/get-sheet?user_id=123&spreadsheet_id=abc&title=Sheet1"
@@ -32,6 +33,8 @@ class TestGetSheet:
                 mock_load_user_credentials.assert_called_once()
                 mock_get_sheet.assert_called_once()
                 assert response.status_code == 200
+
+                excepted = GoogleSheetValues(values=values).model_dump()
                 assert response.json() == excepted
 
 
