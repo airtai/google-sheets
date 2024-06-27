@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import datetime
 from os import environ
 from typing import Annotated, Dict, List, Literal, Union
 
@@ -290,10 +291,17 @@ MANDATORY_KEYWORD_TEMPLATE_COLUMNS = [
 
 
 def validate_data(df: pd.DataFrame, mandatory_columns: List[str], name: str) -> str:
+    error_msg = ""
+    if len(df.columns) != len(set(df.columns)):
+        error_msg = f"""Duplicate columns found in the {name} data.
+Please provide unique column names.
+"""
     if not all(col in df.columns for col in mandatory_columns):
-        return f"""Mandatory columns missing in the {name} data.
+        error_msg += f"""Mandatory columns missing in the {name} data.
 Please provide the following columns: {mandatory_columns}
 """
+    if error_msg:
+        return error_msg
     return ""
 
 
@@ -378,11 +386,6 @@ async def process_data(
     return _process_data(template_df, new_campaign_df)
 
 
-# process-spreadsheet endpoint
-# input: user_id, template_spreadsheet_id, template_sheet_title, new_campaign_spreadsheet_id, new_campaign_sheet_title, target_resource
-
-
-# output: new sheet within the new_campaign_spreadsheet_id with the processed data and 201 status code
 @app.post(
     "/process-spreadsheet",
     description="Process data to generate new ads or keywords based on the template",
@@ -409,10 +412,52 @@ async def process_spreadsheet(
         Literal["ad", "keyword"], Query(description="The target resource to be updated")
     ],
 ) -> Response:
-    # service = await build_service(user_id=user_id, service_name="sheets", version="v4")
+    template_values = await get_sheet(
+        user_id=user_id,
+        spreadsheet_id=template_spreadsheet_id,
+        title=template_sheet_title,
+    )
+    new_campaign_values = await get_sheet(
+        user_id=user_id,
+        spreadsheet_id=new_campaign_spreadsheet_id,
+        title=new_campaign_sheet_title,
+    )
 
-    # try:
-    #     template_values = await get_sheet(user_id=user_id, spreadsheet_id=template_spreadsheet_id, title=template_sheet_title)
-    #     new_campaign_values = await get_sheet(user_id=user_id, spreadsheet_id=new_campaign_spreadsheet_id, title=new_campaign_sheet_title)
+    if not isinstance(template_values, GoogleSheetValues) or not isinstance(
+        new_campaign_values, GoogleSheetValues
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"""Invalid data format.
+template_values: {template_values}
 
-    raise NotImplementedError("This endpoint is not implemented yet.")
+new_campaign_values: {new_campaign_values}
+
+Please provide data in the correct format.""",
+        )
+
+    processed_values = await process_data(
+        template_sheet_values=template_values,
+        new_campaign_sheet_values=new_campaign_values,
+        target_resource=target_resource,
+    )
+
+    title = (
+        f"Captn - {target_resource.capitalize()}s {datetime.now():%Y-%m-%d %H:%M:%S}"
+    )
+    await create_sheet(
+        user_id=user_id,
+        spreadsheet_id=new_campaign_spreadsheet_id,
+        title=title,
+    )
+    await update_sheet(
+        user_id=user_id,
+        spreadsheet_id=new_campaign_spreadsheet_id,
+        title=title,
+        sheet_values=processed_values,
+    )
+
+    return Response(
+        status_code=status.HTTP_201_CREATED,
+        content=f"Sheet with the name 'Captn - {target_resource.capitalize()}s' has been created successfully.",
+    )
