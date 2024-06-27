@@ -280,6 +280,14 @@ MANDATORY_AD_TEMPLATE_COLUMNS = [
     "Final Url",
 ]
 
+MANDATORY_KEYWORD_TEMPLATE_COLUMNS = [
+    "Campaign",
+    "Ad Group",
+    "Keyword",
+    "Criterion Type",
+    "Max CPC",
+]
+
 
 def validate_data(df: pd.DataFrame, mandatory_columns: List[str], name: str) -> str:
     if not all(col in df.columns for col in mandatory_columns):
@@ -289,7 +297,7 @@ Please provide the following columns: {mandatory_columns}
     return ""
 
 
-def process_ad_data(
+def _process_data(
     template_df: pd.DataFrame, new_campaign_df: pd.DataFrame
 ) -> GoogleSheetValues:
     final_df = pd.DataFrame(columns=template_df.columns)
@@ -307,10 +315,14 @@ def process_ad_data(
                     [final_df, pd.DataFrame([new_row])], ignore_index=True
                 )
 
-    return GoogleSheetValues(values=final_df.values.tolist())
+    values = [final_df.columns.tolist(), *final_df.values.tolist()]
+    return GoogleSheetValues(values=values)
 
 
-@app.post("/process-data")
+@app.post(
+    "/process-data",
+    description="Process data to generate new ads or keywords based on the template",
+)
 async def process_data(
     template_sheet_values: GoogleSheetValues,
     new_campaign_sheet_values: GoogleSheetValues,
@@ -341,20 +353,26 @@ async def process_data(
         ) from e
 
     validation_error_msg = validate_data(
-        df=template_df,
-        mandatory_columns=MANDATORY_AD_TEMPLATE_COLUMNS,
-        name="ads template",
+        df=new_campaign_df,
+        mandatory_columns=NEW_CAMPAIGN_MANDATORY_COLUMNS,
+        name="new campaign",
     )
+
     if target_resource == "ad":
         validation_error_msg += validate_data(
-            df=new_campaign_df,
-            mandatory_columns=NEW_CAMPAIGN_MANDATORY_COLUMNS,
-            name="new campaign",
+            df=template_df,
+            mandatory_columns=MANDATORY_AD_TEMPLATE_COLUMNS,
+            name="ads template",
         )
-        if validation_error_msg:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail=validation_error_msg
-            )
-        return process_ad_data(template_df, new_campaign_df)
+    else:
+        validation_error_msg += validate_data(
+            df=template_df,
+            mandatory_columns=MANDATORY_KEYWORD_TEMPLATE_COLUMNS,
+            name="keyword template",
+        )
+    if validation_error_msg:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=validation_error_msg
+        )
 
-    raise NotImplementedError("Processing for keyword data is not implemented yet.")
+    return _process_data(template_df, new_campaign_df)
