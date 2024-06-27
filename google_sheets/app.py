@@ -300,11 +300,6 @@ Please provide the following columns: {MANDATORY_TEMPLATE_COLUMNS}"""
             detail=mandatory_columns_error_message,
         )
 
-    # create new dataframe with columns from the template data
-    # For each row in the new campaign data frame, create two rows in the final data frame
-    # Both rows will have the same data except for the Ad Group column
-    # One will have "Station From - Station To" and the other will have "Station To - Station From"
-    # Campaign value will be the same for both rows - "Country - Station From - Station To"
     final_df = pd.DataFrame(columns=template_df.columns)
     for _, row in new_campaign_df.iterrows():
         campaign = f"{row['Country']} - {row['Station From']} - {row['Station To']}"
@@ -312,11 +307,10 @@ Please provide the following columns: {MANDATORY_TEMPLATE_COLUMNS}"""
             f"{row['Station From']} - {row['Station To']}",
             f"{row['Station To']} - {row['Station From']}",
         ]:
-            new_row = row.copy()
+            new_row = template_df.iloc[0].copy()
             new_row["Campaign"] = campaign
             new_row["Ad Group"] = ad_group
-            final_df = final_df.append(new_row, ignore_index=True)
-            # AttributeError: 'DataFrame' object has no attribute 'append'
+            final_df = pd.concat([final_df, pd.DataFrame([new_row])], ignore_index=True)
 
     return GoogleSheetValues(values=final_df.values.tolist())
 
