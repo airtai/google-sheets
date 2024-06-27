@@ -49,6 +49,7 @@ dependencies = [
     "prisma==0.13.1",
     "google-api-python-client==2.133.0",
     "asyncify==0.10.0",
+    "pandas==2.2.2"
 ]
 
 [project.optional-dependencies]

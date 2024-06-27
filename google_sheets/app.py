@@ -1,9 +1,10 @@
 import json
 import logging
 from os import environ
-from typing import Annotated, Dict, List, Union
+from typing import Annotated, Dict, List, Literal, Union
 
 import httpx
+import pandas as pd
 from fastapi import FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
 from googleapiclient.errors import HttpError
@@ -265,3 +266,92 @@ async def get_all_sheet_titles(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         ) from e
     return sheets
+
+
+NEW_CAMPAIGN_MANDATORY_COLUMNS = ["Country", "Station From", "Station To"]
+MANDATORY_TEMPLATE_COLUMNS = [
+    "Campaign",
+    "Ad Group",
+    "Headline 1",
+    "Headline 2",
+    "Headline 3",
+    "Description Line 1",
+    "Description Line 2",
+    "Final Url",
+]
+
+
+def process_ad_data(
+    template_df: pd.DataFrame, new_campaign_df: pd.DataFrame
+) -> GoogleSheetValues:
+    mandatory_columns_error_message = ""
+    if not all(
+        col in new_campaign_df.columns for col in NEW_CAMPAIGN_MANDATORY_COLUMNS
+    ):
+        mandatory_columns_error_message = f"""Mandatory columns missing in the new campaign data.
+Please provide the following columns: {NEW_CAMPAIGN_MANDATORY_COLUMNS}"""
+
+    if not all(col in template_df.columns for col in MANDATORY_TEMPLATE_COLUMNS):
+        mandatory_columns_error_message = f"""Mandatory columns missing in the template data.
+Please provide the following columns: {MANDATORY_TEMPLATE_COLUMNS}"""
+    if mandatory_columns_error_message:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=mandatory_columns_error_message,
+        )
+
+    # create new dataframe with columns from the template data
+    # For each row in the new campaign data frame, create two rows in the final data frame
+    # Both rows will have the same data except for the Ad Group column
+    # One will have "Station From - Station To" and the other will have "Station To - Station From"
+    # Campaign value will be the same for both rows - "Country - Station From - Station To"
+    final_df = pd.DataFrame(columns=template_df.columns)
+    for _, row in new_campaign_df.iterrows():
+        campaign = f"{row['Country']} - {row['Station From']} - {row['Station To']}"
+        for ad_group in [
+            f"{row['Station From']} - {row['Station To']}",
+            f"{row['Station To']} - {row['Station From']}",
+        ]:
+            new_row = row.copy()
+            new_row["Campaign"] = campaign
+            new_row["Ad Group"] = ad_group
+            final_df = final_df.append(new_row, ignore_index=True)
+            # AttributeError: 'DataFrame' object has no attribute 'append'
+
+    return GoogleSheetValues(values=final_df.values.tolist())
+
+
+@app.post("/process-data")
+async def process_data(
+    template_sheet_values: GoogleSheetValues,
+    new_campaign_sheet_values: GoogleSheetValues,
+    target_resource: Annotated[
+        Literal["ad", "keyword"], Query(description="The target resource to be updated")
+    ],
+) -> GoogleSheetValues:
+    if (
+        len(template_sheet_values.values) < 2
+        or len(new_campaign_sheet_values.values) < 2
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Both template and new campaign data should have at least two rows (header and data).",
+        )
+    try:
+        template_df = pd.DataFrame(
+            template_sheet_values.values[1:], columns=template_sheet_values.values[0]
+        )
+        new_campaign_df = pd.DataFrame(
+            new_campaign_sheet_values.values[1:],
+            columns=new_campaign_sheet_values.values[0],
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid data format. Please provide data in the correct format: {e}",
+        ) from e
+
+    if target_resource == "ad":
+        return process_ad_data(template_df, new_campaign_df)
+
+    raise NotImplementedError("Processing for keyword data is not implemented yet.")
