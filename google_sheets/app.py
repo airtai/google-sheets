@@ -269,7 +269,7 @@ async def get_all_sheet_titles(
 
 
 NEW_CAMPAIGN_MANDATORY_COLUMNS = ["Country", "Station From", "Station To"]
-MANDATORY_TEMPLATE_COLUMNS = [
+MANDATORY_AD_TEMPLATE_COLUMNS = [
     "Campaign",
     "Ad Group",
     "Headline 1",
@@ -281,36 +281,31 @@ MANDATORY_TEMPLATE_COLUMNS = [
 ]
 
 
+def validate_data(df: pd.DataFrame, mandatory_columns: List[str], name: str) -> str:
+    if not all(col in df.columns for col in mandatory_columns):
+        return f"""Mandatory columns missing in the {name} data.
+Please provide the following columns: {mandatory_columns}
+"""
+    return ""
+
+
 def process_ad_data(
     template_df: pd.DataFrame, new_campaign_df: pd.DataFrame
 ) -> GoogleSheetValues:
-    mandatory_columns_error_message = ""
-    if not all(
-        col in new_campaign_df.columns for col in NEW_CAMPAIGN_MANDATORY_COLUMNS
-    ):
-        mandatory_columns_error_message = f"""Mandatory columns missing in the new campaign data.
-Please provide the following columns: {NEW_CAMPAIGN_MANDATORY_COLUMNS}"""
-
-    if not all(col in template_df.columns for col in MANDATORY_TEMPLATE_COLUMNS):
-        mandatory_columns_error_message = f"""Mandatory columns missing in the template data.
-Please provide the following columns: {MANDATORY_TEMPLATE_COLUMNS}"""
-    if mandatory_columns_error_message:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=mandatory_columns_error_message,
-        )
-
     final_df = pd.DataFrame(columns=template_df.columns)
-    for _, row in new_campaign_df.iterrows():
-        campaign = f"{row['Country']} - {row['Station From']} - {row['Station To']}"
-        for ad_group in [
-            f"{row['Station From']} - {row['Station To']}",
-            f"{row['Station To']} - {row['Station From']}",
-        ]:
-            new_row = template_df.iloc[0].copy()
-            new_row["Campaign"] = campaign
-            new_row["Ad Group"] = ad_group
-            final_df = pd.concat([final_df, pd.DataFrame([new_row])], ignore_index=True)
+    for _, template_row in template_df.iterrows():
+        for _, new_campaign_row in new_campaign_df.iterrows():
+            campaign = f"{new_campaign_row['Country']} - {new_campaign_row['Station From']} - {new_campaign_row['Station To']}"
+            for ad_group in [
+                f"{new_campaign_row['Station From']} - {new_campaign_row['Station To']}",
+                f"{new_campaign_row['Station To']} - {new_campaign_row['Station From']}",
+            ]:
+                new_row = template_row.copy()
+                new_row["Campaign"] = campaign
+                new_row["Ad Group"] = ad_group
+                final_df = pd.concat(
+                    [final_df, pd.DataFrame([new_row])], ignore_index=True
+                )
 
     return GoogleSheetValues(values=final_df.values.tolist())
 
@@ -345,7 +340,21 @@ async def process_data(
             detail=f"Invalid data format. Please provide data in the correct format: {e}",
         ) from e
 
+    validation_error_msg = validate_data(
+        df=template_df,
+        mandatory_columns=MANDATORY_AD_TEMPLATE_COLUMNS,
+        name="ads template",
+    )
     if target_resource == "ad":
+        validation_error_msg += validate_data(
+            df=new_campaign_df,
+            mandatory_columns=NEW_CAMPAIGN_MANDATORY_COLUMNS,
+            name="new campaign",
+        )
+        if validation_error_msg:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail=validation_error_msg
+            )
         return process_ad_data(template_df, new_campaign_df)
 
     raise NotImplementedError("Processing for keyword data is not implemented yet.")
