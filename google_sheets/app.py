@@ -11,7 +11,7 @@ from fastapi.responses import RedirectResponse
 from googleapiclient.errors import HttpError
 
 from . import __version__
-from .data_processing import process_data_f, validate_input_data
+from .data_processing import process_data_f, validate_input_data, validate_output_data
 from .db_helpers import get_db_connection
 from .google_api import (
     build_service,
@@ -348,8 +348,10 @@ async def process_data(
         )
 
     processed_df = process_data_f(template_df, new_campaign_df)
-    values = [processed_df.columns.tolist(), *processed_df.values.tolist()]
-    # validate_output_data(processed_values, target_resource)
+
+    validated_df = validate_output_data(processed_df, target_resource)
+
+    values = [validated_df.columns.tolist(), *validated_df.values.tolist()]
 
     return GoogleSheetValues(values=values)
 

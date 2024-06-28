@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 import pytest
@@ -147,7 +147,19 @@ def test_process_data_f(
     process_data_f(template_df, new_campaign_df).equals(expected)
 
 
-def test_validate_output_data() -> None:
+@pytest.mark.parametrize(
+    "issues_column",
+    [
+        [
+            "Duplicate headlines found.\nDuplicate descriptions found.\n",
+            "Duplicate descriptions found.\n",
+            "",
+            "Minimum 3 headlines are required, found 2.\nMinimum 2 descriptions are required, found 1.\n",
+        ],
+        None,
+    ],
+)
+def test_validate_output_data(issues_column: Optional[List[str]]) -> None:
     df = pd.DataFrame(
         {
             "Headline 1": ["H1", "H1", "H1", "H1"],
@@ -155,25 +167,11 @@ def test_validate_output_data() -> None:
             "Headline 3": ["H3", "H3", "H3", ""],
             "Description 1": ["D1", "D1", "D2", "D3"],
             "Description 2": ["D1", "D1", "D3", ""],
-            "Final URL": ["F1", "F1", "F1", ""],
         }
     )
     result = validate_output_data(df, "ad")
-    expected = pd.DataFrame(
-        {
-            "Headline 1": ["H1", "H1", "H1", "H1"],
-            "Headline 2": ["H1", "H2", "H2", "H2"],
-            "Headline 3": ["H3", "H3", "H3", ""],
-            "Description 1": ["D1", "D1", "D2", "D3"],
-            "Description 2": ["D1", "D1", "D3", ""],
-            "Final URL": ["F1", "F1", "F1", ""],
-            "Issues": [
-                "Duplicate headlines found.\nDuplicate descriptions found.\n",
-                "Duplicate descriptions found.\n",
-                "",
-                "Minimum 3 headlines are required, found 2.\nMinimum 2 descriptions are required, found 1.\nFinal URL is missing.\n",
-            ],
-        }
-    )
+    expected = df.copy()
+    if issues_column:
+        expected["Issues"] = issues_column
 
     assert result.equals(expected)

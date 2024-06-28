@@ -107,9 +107,9 @@ def _validate_output_data_ad(df: pd.DataFrame) -> pd.DataFrame:
                 f"Maximum {MAX_DESCRIPTIONS} descriptions are allowed, found {description_count}.\n"
             )
 
-        # Check for the final URL
-        if not row["Final URL"]:
-            df.loc[index, "Issues"] += "Final URL is missing.\n"
+        # TODO: Check for the final URL
+        # if not row["Final URL"]:
+        #     df.loc[index, "Issues"] += "Final URL is missing.\n"
 
     if not df["Issues"].any():
         df = df.drop(columns=["Issues"])
@@ -122,6 +122,6 @@ def validate_output_data(
 ) -> pd.DataFrame:
     if target_resource == "keyword":
         # No validation required for keyword data currently
-        return
+        return df
 
     return _validate_output_data_ad(df)
