@@ -65,17 +65,32 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
                     "Station To": ["C", "D"],
                 }
             ),
-            [
-                ["Campaign", "Ad Group", "Keyword", "Max CPC"],
-                ["USA - A - C", "A - C", "k1", ""],
-                ["USA - A - C", "C - A", "k1", ""],
-                ["USA - B - D", "B - D", "k1", ""],
-                ["USA - B - D", "D - B", "k1", ""],
-                ["USA - A - C", "A - C", "k2", ""],
-                ["USA - A - C", "C - A", "k2", ""],
-                ["USA - B - D", "B - D", "k2", ""],
-                ["USA - B - D", "D - B", "k2", ""],
-            ],
+            pd.DataFrame(
+                {
+                    "Campaign": [
+                        "USA - A - C",
+                        "USA - A - C",
+                        "USA - B - D",
+                        "USA - B - D",
+                        "USA - A - C",
+                        "USA - A - C",
+                        "USA - B - D",
+                        "USA - B - D",
+                    ],
+                    "Ad Group": [
+                        "A - C",
+                        "C - A",
+                        "B - D",
+                        "D - B",
+                        "A - C",
+                        "C - A",
+                        "B - D",
+                        "D - B",
+                    ],
+                    "Keyword": ["k1", "k1", "k1", "k1", "k2", "k2", "k2", "k2"],
+                    "Max CPC": ["", "", "", "", "", "", "", ""],
+                }
+            ),
         ),
         (
             pd.DataFrame(
@@ -93,21 +108,36 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
                     "Station To": ["C", "D"],
                 }
             ),
-            [
-                ["Campaign", "Ad Group", "Keyword", "Max CPC"],
-                ["USA - A - C", "A - C", "k1 A", ""],
-                ["USA - A - C", "C - A", "k1 C", ""],
-                ["USA - B - D", "B - D", "k1 B", ""],
-                ["USA - B - D", "D - B", "k1 D", ""],
-                ["USA - A - C", "A - C", "k2", ""],
-                ["USA - A - C", "C - A", "k2", ""],
-                ["USA - B - D", "B - D", "k2", ""],
-                ["USA - B - D", "D - B", "k2", ""],
-            ],
+            pd.DataFrame(
+                {
+                    "Campaign": [
+                        "USA - A - C",
+                        "USA - A - C",
+                        "USA - B - D",
+                        "USA - B - D",
+                        "USA - A - C",
+                        "USA - A - C",
+                        "USA - B - D",
+                        "USA - B - D",
+                    ],
+                    "Ad Group": [
+                        "A - C",
+                        "C - A",
+                        "B - D",
+                        "D - B",
+                        "A - C",
+                        "C - A",
+                        "B - D",
+                        "D - B",
+                    ],
+                    "Keyword": ["k1 A", "k1 C", "k1 B", "k1 D", "k2", "k2", "k2", "k2"],
+                    "Max CPC": ["", "", "", "", "", "", "", ""],
+                }
+            ),
         ),
     ],
 )
 def test_process_data_f(
     template_df: pd.DataFrame, new_campaign_df: pd.DataFrame, expected: List[List[str]]
 ) -> None:
-    assert process_data_f(template_df, new_campaign_df).values == expected
+    process_data_f(template_df, new_campaign_df).equals(expected)

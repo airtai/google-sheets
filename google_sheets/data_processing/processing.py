@@ -2,8 +2,6 @@ from typing import List
 
 import pandas as pd
 
-from ..model import GoogleSheetValues
-
 __all__ = ["process_data_f", "validate_input_data"]
 
 
@@ -30,7 +28,7 @@ INSERT_STATION_TO = "INSERT_STATION_TO"
 
 def process_data_f(
     template_df: pd.DataFrame, new_campaign_df: pd.DataFrame
-) -> GoogleSheetValues:
+) -> pd.DataFrame:
     final_df = pd.DataFrame(columns=template_df.columns)
     for _, template_row in template_df.iterrows():
         for _, new_campaign_row in new_campaign_df.iterrows():
@@ -63,5 +61,4 @@ def process_data_f(
                     [final_df, pd.DataFrame([new_row])], ignore_index=True
                 )
 
-    values = [final_df.columns.tolist(), *final_df.values.tolist()]
-    return GoogleSheetValues(values=values)
+    return final_df

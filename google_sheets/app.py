@@ -347,7 +347,11 @@ async def process_data(
             status_code=status.HTTP_400_BAD_REQUEST, detail=validation_error_msg
         )
 
-    return process_data_f(template_df, new_campaign_df)
+    processed_df = process_data_f(template_df, new_campaign_df)
+    values = [processed_df.columns.tolist(), *processed_df.values.tolist()]
+    # validate_output_data(processed_values, target_resource)
+
+    return GoogleSheetValues(values=values)
 
 
 @app.post(
