@@ -3,7 +3,11 @@ from typing import List
 import pandas as pd
 import pytest
 
-from google_sheets.data_processing.processing import process_data_f, validate_input_data
+from google_sheets.data_processing.processing import (
+    process_data_f,
+    validate_input_data,
+    validate_output_data,
+)
 
 
 @pytest.mark.parametrize(
@@ -141,3 +145,35 @@ def test_process_data_f(
     template_df: pd.DataFrame, new_campaign_df: pd.DataFrame, expected: List[List[str]]
 ) -> None:
     process_data_f(template_df, new_campaign_df).equals(expected)
+
+
+def test_validate_output_data() -> None:
+    df = pd.DataFrame(
+        {
+            "Headline 1": ["H1", "H1", "H1", "H1"],
+            "Headline 2": ["H1", "H2", "H2", "H2"],
+            "Headline 3": ["H3", "H3", "H3", ""],
+            "Description 1": ["D1", "D1", "D2", "D3"],
+            "Description 2": ["D1", "D1", "D3", ""],
+            "Final URL": ["F1", "F1", "F1", ""],
+        }
+    )
+    result = validate_output_data(df, "ad")
+    expected = pd.DataFrame(
+        {
+            "Headline 1": ["H1", "H1", "H1", "H1"],
+            "Headline 2": ["H1", "H2", "H2", "H2"],
+            "Headline 3": ["H3", "H3", "H3", ""],
+            "Description 1": ["D1", "D1", "D2", "D3"],
+            "Description 2": ["D1", "D1", "D3", ""],
+            "Final URL": ["F1", "F1", "F1", ""],
+            "Issues": [
+                "Duplicate headlines found.\nDuplicate descriptions found.\n",
+                "Duplicate descriptions found.\n",
+                "",
+                "Minimum 3 headlines are required, found 2.\nMinimum 2 descriptions are required, found 1.\nFinal URL is missing.\n",
+            ],
+        }
+    )
+
+    assert result.equals(expected)

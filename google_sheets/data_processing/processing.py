@@ -1,8 +1,8 @@
-from typing import List
+from typing import List, Literal
 
 import pandas as pd
 
-__all__ = ["process_data_f", "validate_input_data"]
+__all__ = ["process_data_f", "validate_input_data", "validate_output_data"]
 
 
 def validate_input_data(
@@ -62,3 +62,66 @@ def process_data_f(
                 )
 
     return final_df
+
+
+MIN_HEADLINES = 3
+MAX_HEADLINES = 15
+MIN_DESCRIPTIONS = 2
+MAX_DESCRIPTIONS = 4
+
+
+def _validate_output_data_ad(df: pd.DataFrame) -> pd.DataFrame:
+    df["Issues"] = ""
+    headline_columns = [col for col in df.columns if "Headline" in col]
+    description_columns = [col for col in df.columns if "Description" in col]
+
+    for index, row in df.iterrows():
+        # Check for duplicate headlines and descriptions
+        if len(set(row[headline_columns])) != len(row[headline_columns]):
+            df.loc[index, "Issues"] += "Duplicate headlines found.\n"
+        if len(set(row[description_columns])) != len(row[description_columns]):
+            df.loc[index, "Issues"] += "Duplicate descriptions found.\n"
+
+        # Check for the number of headlines and descriptions
+        headline_count = len(
+            [headline for headline in row[headline_columns] if headline]
+        )
+        if headline_count < MIN_HEADLINES:
+            df.loc[index, "Issues"] += (
+                f"Minimum {MIN_HEADLINES} headlines are required, found {headline_count}.\n"
+            )
+        elif headline_count > MAX_HEADLINES:
+            df.loc[index, "Issues"] += (
+                f"Maximum {MAX_HEADLINES} headlines are allowed, found {headline_count}.\n"
+            )
+
+        description_count = len(
+            [description for description in row[description_columns] if description]
+        )
+        if description_count < MIN_DESCRIPTIONS:
+            df.loc[index, "Issues"] += (
+                f"Minimum {MIN_DESCRIPTIONS} descriptions are required, found {description_count}.\n"
+            )
+        elif description_count > MAX_DESCRIPTIONS:
+            df.loc[index, "Issues"] += (
+                f"Maximum {MAX_DESCRIPTIONS} descriptions are allowed, found {description_count}.\n"
+            )
+
+        # Check for the final URL
+        if not row["Final URL"]:
+            df.loc[index, "Issues"] += "Final URL is missing.\n"
+
+    if not df["Issues"].any():
+        df = df.drop(columns=["Issues"])
+
+    return df
+
+
+def validate_output_data(
+    df: pd.DataFrame, target_resource: Literal["ad", "keyword"]
+) -> pd.DataFrame:
+    if target_resource == "keyword":
+        # No validation required for keyword data currently
+        return
+
+    return _validate_output_data_ad(df)
