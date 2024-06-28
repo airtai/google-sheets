@@ -11,7 +11,7 @@ from fastapi.responses import RedirectResponse
 from googleapiclient.errors import HttpError
 
 from . import __version__
-from .data_processing import process_data_f, validate_data
+from .data_processing import process_data_f, validate_input_data
 from .db_helpers import get_db_connection
 from .google_api import (
     build_service,
@@ -324,20 +324,20 @@ async def process_data(
             detail=f"Invalid data format. Please provide data in the correct format: {e}",
         ) from e
 
-    validation_error_msg = validate_data(
+    validation_error_msg = validate_input_data(
         df=new_campaign_df,
         mandatory_columns=NEW_CAMPAIGN_MANDATORY_COLUMNS,
         name="new campaign",
     )
 
     if target_resource == "ad":
-        validation_error_msg += validate_data(
+        validation_error_msg += validate_input_data(
             df=template_df,
             mandatory_columns=MANDATORY_AD_TEMPLATE_COLUMNS,
             name="ads template",
         )
     else:
-        validation_error_msg += validate_data(
+        validation_error_msg += validate_input_data(
             df=template_df,
             mandatory_columns=MANDATORY_KEYWORD_TEMPLATE_COLUMNS,
             name="keyword template",

@@ -4,10 +4,12 @@ import pandas as pd
 
 from ..model import GoogleSheetValues
 
-__all__ = ["process_data_f", "validate_data"]
+__all__ = ["process_data_f", "validate_input_data"]
 
 
-def validate_data(df: pd.DataFrame, mandatory_columns: List[str], name: str) -> str:
+def validate_input_data(
+    df: pd.DataFrame, mandatory_columns: List[str], name: str
+) -> str:
     error_msg = ""
     if len(df.columns) != len(set(df.columns)):
         error_msg = f"""Duplicate columns found in the {name} data.

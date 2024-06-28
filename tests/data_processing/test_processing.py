@@ -3,7 +3,7 @@ from typing import List
 import pandas as pd
 import pytest
 
-from google_sheets.data_processing.processing import process_data_f, validate_data
+from google_sheets.data_processing.processing import process_data_f, validate_input_data
 
 
 @pytest.mark.parametrize(
@@ -41,9 +41,9 @@ Please provide unique column names.
         ),
     ],
 )
-def test_validate_data(df: pd.DataFrame, expected: str) -> None:
+def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
     mandatory_columns = ["Country", "Station From", "Station To"]
-    assert validate_data(df, mandatory_columns, "name") == expected
+    assert validate_input_data(df, mandatory_columns, "name") == expected
 
 
 @pytest.mark.parametrize(
