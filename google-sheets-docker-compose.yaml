@@ -12,6 +12,7 @@ services:
       - REDIRECT_DOMAIN=${REDIRECT_DOMAIN}
       - DATABASE_URL=${DATABASE_URL}
       - CLIENT_SECRET=${CLIENT_SECRET}
+    restart: always
     networks:
       - google-sheets
 
