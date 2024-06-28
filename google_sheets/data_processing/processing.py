@@ -69,8 +69,11 @@ MAX_HEADLINES = 15
 MIN_DESCRIPTIONS = 2
 MAX_DESCRIPTIONS = 4
 
+MAX_HEADLINE_LENGTH = 30
+MAX_DESCRIPTION_LENGTH = 90
 
-def _validate_output_data_ad(df: pd.DataFrame) -> pd.DataFrame:
+
+def _validate_output_data_ad(df: pd.DataFrame) -> pd.DataFrame:  # noqa: C901
     df["Issues"] = ""
     headline_columns = [col for col in df.columns if "Headline" in col]
     description_columns = [col for col in df.columns if "Description" in col]
@@ -106,6 +109,21 @@ def _validate_output_data_ad(df: pd.DataFrame) -> pd.DataFrame:
             df.loc[index, "Issues"] += (
                 f"Maximum {MAX_DESCRIPTIONS} descriptions are allowed, found {description_count}.\n"
             )
+
+        # Check for the length of headlines and descriptions
+        for headline_column in headline_columns:
+            headline = row[headline_column]
+            if len(headline) > MAX_HEADLINE_LENGTH:
+                df.loc[index, "Issues"] += (
+                    f"Headline length should be less than {MAX_HEADLINE_LENGTH} characters, found {len(headline)} in column {headline_column}.\n"
+                )
+
+        for description_column in description_columns:
+            description = row[description_column]
+            if len(description) > MAX_DESCRIPTION_LENGTH:
+                df.loc[index, "Issues"] += (
+                    f"Description length should be less than {MAX_DESCRIPTION_LENGTH} characters, found {len(description)} in column {description_column}.\n"
+                )
 
         # TODO: Check for the final URL
         # if not row["Final URL"]:

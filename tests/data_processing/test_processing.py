@@ -154,7 +154,7 @@ def test_process_data_f(
             "Duplicate headlines found.\nDuplicate descriptions found.\n",
             "Duplicate descriptions found.\n",
             "",
-            "Minimum 3 headlines are required, found 2.\nMinimum 2 descriptions are required, found 1.\n",
+            "Minimum 3 headlines are required, found 2.\nMinimum 2 descriptions are required, found 1.\nHeadline length should be less than 30 characters, found 31 in column Headline 2.\n",
         ],
         None,
     ],
@@ -163,7 +163,7 @@ def test_validate_output_data(issues_column: Optional[List[str]]) -> None:
     df = pd.DataFrame(
         {
             "Headline 1": ["H1", "H1", "H1", "H1"],
-            "Headline 2": ["H1", "H2", "H2", "H2"],
+            "Headline 2": ["H1", "H2", "H2", ("H" * 31)],
             "Headline 3": ["H3", "H3", "H3", ""],
             "Description 1": ["D1", "D1", "D2", "D3"],
             "Description 2": ["D1", "D1", "D3", ""],
