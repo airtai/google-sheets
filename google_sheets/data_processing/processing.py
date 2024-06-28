@@ -22,6 +22,10 @@ Please provide the following columns: {mandatory_columns}
     return ""
 
 
+INSERT_STATION_FROM = "INSERT_STATION_FROM"
+INSERT_STATION_TO = "INSERT_STATION_TO"
+
+
 def process_data_f(
     template_df: pd.DataFrame, new_campaign_df: pd.DataFrame
 ) -> GoogleSheetValues:
@@ -29,13 +33,30 @@ def process_data_f(
     for _, template_row in template_df.iterrows():
         for _, new_campaign_row in new_campaign_df.iterrows():
             campaign = f"{new_campaign_row['Country']} - {new_campaign_row['Station From']} - {new_campaign_row['Station To']}"
-            for ad_group in [
-                f"{new_campaign_row['Station From']} - {new_campaign_row['Station To']}",
-                f"{new_campaign_row['Station To']} - {new_campaign_row['Station From']}",
-            ]:
+            stations = [
+                {
+                    "Station From": new_campaign_row["Station From"],
+                    "Station To": new_campaign_row["Station To"],
+                },
+                # Reverse the order of the stations
+                {
+                    "Station From": new_campaign_row["Station To"],
+                    "Station To": new_campaign_row["Station From"],
+                },
+            ]
+            for station in stations:
                 new_row = template_row.copy()
                 new_row["Campaign"] = campaign
-                new_row["Ad Group"] = ad_group
+                new_row["Ad Group"] = (
+                    f"{station['Station From']} - {station['Station To']}"
+                )
+
+                # Replace the placeholders in all columns with the actual station names INSERT_STATION_FROM
+                new_row = new_row.str.replace(
+                    INSERT_STATION_FROM, station["Station From"]
+                )
+                new_row = new_row.str.replace(INSERT_STATION_TO, station["Station To"])
+
                 final_df = pd.concat(
                     [final_df, pd.DataFrame([new_row])], ignore_index=True
                 )
