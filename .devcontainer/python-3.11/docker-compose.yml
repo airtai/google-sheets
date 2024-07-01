@@ -1,0 +1,30 @@
+version: '3'
+
+services:
+  python-3.11:  # nosemgrep
+    image: mcr.microsoft.com/devcontainers/python:3.11
+    container_name: $USER-python-3.11-google-sheets
+    volumes:
+      - ../../:/workspaces/google-sheets:cached
+    command: sleep infinity
+    environment:
+      - DATABASE_URL=postgresql://admin:password@${USER}-postgres-py39-google-sheets:5432/google-sheets
+    env_file:
+      - ../devcontainer.env
+    networks:
+      - google-sheets-network
+  postgres-google-sheets:  # nosemgrep
+    image: postgres:latest
+    container_name: $USER-postgres-py39-google-sheets
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password  # pragma: allowlist secret
+      POSTGRES_DB: google-sheets
+    # ports:
+    #   - "${PORT_PREFIX}5432:5432"
+    networks:
+      - google-sheets-network
+
+networks:
+  google-sheets-network:
+    name: "${USER}-google-sheets-network"
