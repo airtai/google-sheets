@@ -1,1 +1,694 @@
-{"openapi":"3.1.0","info":{"title":"google-sheets","version":"0.1.0"},"servers":[{"url":"http://localhost:8000","description":"Google Sheets app server"}],"paths":{"/login":{"get":{"summary":"Get Login Url","operationId":"get_login_url_login_get","parameters":[{"name":"user_id","in":"query","required":true,"schema":{"type":"integer","title":"User ID"}},{"name":"force_new_login","in":"query","required":false,"schema":{"type":"boolean","title":"Force new login","default":false}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"object","additionalProperties":{"type":"string"},"title":"Response Get Login Url Login Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/login/success":{"get":{"summary":"Get Login Success","operationId":"get_login_success_login_success_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"additionalProperties":{"type":"string"},"type":"object","title":"Response Get Login Success Login Success Get"}}}}}}},"/login/callback":{"get":{"summary":"Login Callback","operationId":"login_callback_login_callback_get","parameters":[{"name":"code","in":"query","required":true,"schema":{"type":"string","title":"Authorization Code"}},{"name":"state","in":"query","required":true,"schema":{"type":"string","title":"State"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/get-sheet":{"get":{"summary":"Get Sheet","description":"Get data from a Google Sheet","operationId":"get_sheet_get_sheet_get","parameters":[{"name":"user_id","in":"query","required":true,"schema":{"type":"integer","description":"The user ID for which the data is requested","title":"User Id"},"description":"The user ID for which the data is requested"},{"name":"spreadsheet_id","in":"query","required":true,"schema":{"type":"string","description":"ID of the Google Sheet to fetch data from","title":"Spreadsheet Id"},"description":"ID of the Google Sheet to fetch data from"},{"name":"title","in":"query","required":true,"schema":{"type":"string","description":"The title of the sheet to fetch data from","title":"Title"},"description":"The title of the sheet to fetch data from"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"anyOf":[{"type":"string"},{"$ref":"#/components/schemas/GoogleSheetValues"}],"title":"Response Get Sheet Get Sheet Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/update-sheet":{"post":{"summary":"Update Sheet","description":"Update data in a Google Sheet within the existing spreadsheet","operationId":"update_sheet_update_sheet_post","parameters":[{"name":"user_id","in":"query","required":true,"schema":{"type":"integer","description":"The user ID for which the data is requested","title":"User Id"},"description":"The user ID for which the data is requested"},{"name":"spreadsheet_id","in":"query","required":true,"schema":{"type":"string","description":"ID of the Google Sheet to fetch data from","title":"Spreadsheet Id"},"description":"ID of the Google Sheet to fetch data from"},{"name":"title","in":"query","required":true,"schema":{"type":"string","description":"The title of the sheet to update","title":"Title"},"description":"The title of the sheet to update"}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/GoogleSheetValues"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/create-sheet":{"post":{"summary":"Create Sheet","description":"Create a new Google Sheet within the existing spreadsheet","operationId":"create_sheet_create_sheet_post","parameters":[{"name":"user_id","in":"query","required":true,"schema":{"type":"integer","description":"The user ID for which the data is requested","title":"User Id"},"description":"The user ID for which the data is requested"},{"name":"spreadsheet_id","in":"query","required":true,"schema":{"type":"string","description":"ID of the Google Sheet to fetch data from","title":"Spreadsheet Id"},"description":"ID of the Google Sheet to fetch data from"},{"name":"title","in":"query","required":true,"schema":{"type":"string","description":"The title of the new sheet","title":"Title"},"description":"The title of the new sheet"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/get-all-file-names":{"get":{"summary":"Get All File Names","description":"Get all sheets associated with the user","operationId":"get_all_file_names_get_all_file_names_get","parameters":[{"name":"user_id","in":"query","required":true,"schema":{"type":"integer","description":"The user ID for which the data is requested","title":"User Id"},"description":"The user ID for which the data is requested"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"object","additionalProperties":{"type":"string"},"title":"Response Get All File Names Get All File Names Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/get-all-sheet-titles":{"get":{"summary":"Get All Sheet Titles","description":"Get all sheet titles within a Google Spreadsheet","operationId":"get_all_sheet_titles_get_all_sheet_titles_get","parameters":[{"name":"user_id","in":"query","required":true,"schema":{"type":"integer","description":"The user ID for which the data is requested","title":"User Id"},"description":"The user ID for which the data is requested"},{"name":"spreadsheet_id","in":"query","required":true,"schema":{"type":"string","description":"ID of the Google Sheet to fetch data from","title":"Spreadsheet Id"},"description":"ID of the Google Sheet to fetch data from"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"type":"string"},"title":"Response Get All Sheet Titles Get All Sheet Titles Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/process-data":{"post":{"summary":"Process Data","description":"Process data to generate new ads or keywords based on the template","operationId":"process_data_process_data_post","parameters":[{"name":"target_resource","in":"query","required":true,"schema":{"enum":["ad","keyword"],"type":"string","description":"The target resource to be updated","title":"Target Resource"},"description":"The target resource to be updated"}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/Body_process_data_process_data_post"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/GoogleSheetValues"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/process-spreadsheet":{"post":{"summary":"Process Spreadsheet","description":"Process data to generate new ads or keywords based on the template","operationId":"process_spreadsheet_process_spreadsheet_post","parameters":[{"name":"user_id","in":"query","required":true,"schema":{"type":"integer","description":"The user ID for which the data is requested","title":"User Id"},"description":"The user ID for which the data is requested"},{"name":"template_spreadsheet_id","in":"query","required":true,"schema":{"type":"string","description":"ID of the Google Sheet with the template data","title":"Template Spreadsheet Id"},"description":"ID of the Google Sheet with the template data"},{"name":"template_sheet_title","in":"query","required":true,"schema":{"type":"string","description":"The title of the sheet with the template data","title":"Template Sheet Title"},"description":"The title of the sheet with the template data"},{"name":"new_campaign_spreadsheet_id","in":"query","required":true,"schema":{"type":"string","description":"ID of the Google Sheet with the new campaign data","title":"New Campaign Spreadsheet Id"},"description":"ID of the Google Sheet with the new campaign data"},{"name":"new_campaign_sheet_title","in":"query","required":true,"schema":{"type":"string","description":"The title of the sheet with the new campaign data","title":"New Campaign Sheet Title"},"description":"The title of the sheet with the new campaign data"},{"name":"target_resource","in":"query","required":true,"schema":{"enum":["ad","keyword"],"type":"string","description":"The target resource to be updated","title":"Target Resource"},"description":"The target resource to be updated"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}}},"components":{"schemas":{"Body_process_data_process_data_post":{"properties":{"template_sheet_values":{"$ref":"#/components/schemas/GoogleSheetValues"},"new_campaign_sheet_values":{"$ref":"#/components/schemas/GoogleSheetValues"}},"type":"object","required":["template_sheet_values","new_campaign_sheet_values"],"title":"Body_process_data_process_data_post"},"GoogleSheetValues":{"properties":{"values":{"items":{"items":{},"type":"array"},"type":"array","title":"Values","description":"Values to be written to the Google Sheet."}},"type":"object","required":["values"],"title":"GoogleSheetValues"},"HTTPValidationError":{"properties":{"detail":{"items":{"$ref":"#/components/schemas/ValidationError"},"type":"array","title":"Detail"}},"type":"object","title":"HTTPValidationError"},"ValidationError":{"properties":{"loc":{"items":{"anyOf":[{"type":"string"},{"type":"integer"}]},"type":"array","title":"Location"},"msg":{"type":"string","title":"Message"},"type":{"type":"string","title":"Error Type"}},"type":"object","required":["loc","msg","type"],"title":"ValidationError"}}}}
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "google-sheets",
+        "version": "0.1.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8000",
+            "description": "Google Sheets app server"
+        }
+    ],
+    "paths": {
+        "/login": {
+            "get": {
+                "summary": "Get Login Url",
+                "description": "Get the URL to log in with Google",
+                "operationId": "get_login_url_login_get",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "The user ID for which the data is requested",
+                            "title": "User Id"
+                        },
+                        "description": "The user ID for which the data is requested"
+                    },
+                    {
+                        "name": "force_new_login",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "description": "Force new login",
+                            "default": false,
+                            "title": "Force New Login"
+                        },
+                        "description": "Force new login"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    },
+                                    "title": "Response Get Login Url Login Get"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/login/success": {
+            "get": {
+                "summary": "Get Login Success",
+                "description": "Get the success message after login",
+                "operationId": "get_login_success_login_success_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    },
+                                    "type": "object",
+                                    "title": "Response Get Login Success Login Success Get"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/login/callback": {
+            "get": {
+                "summary": "Login Callback",
+                "operationId": "login_callback_login_callback_get",
+                "parameters": [
+                    {
+                        "name": "code",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "The authorization code received after successful login",
+                            "title": "Code"
+                        },
+                        "description": "The authorization code received after successful login"
+                    },
+                    {
+                        "name": "state",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "State",
+                            "title": "State"
+                        },
+                        "description": "State"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/get-sheet": {
+            "get": {
+                "summary": "Get Sheet",
+                "description": "Get data from a Google Sheet",
+                "operationId": "get_sheet_get_sheet_get",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "The user ID for which the data is requested",
+                            "title": "User Id"
+                        },
+                        "description": "The user ID for which the data is requested"
+                    },
+                    {
+                        "name": "spreadsheet_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "ID of the Google Sheet to fetch data from",
+                            "title": "Spreadsheet Id"
+                        },
+                        "description": "ID of the Google Sheet to fetch data from"
+                    },
+                    {
+                        "name": "title",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "The title of the sheet to fetch data from",
+                            "title": "Title"
+                        },
+                        "description": "The title of the sheet to fetch data from"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/GoogleSheetValues"
+                                        }
+                                    ],
+                                    "title": "Response Get Sheet Get Sheet Get"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/update-sheet": {
+            "post": {
+                "summary": "Update Sheet",
+                "description": "Update data in a Google Sheet within the existing spreadsheet",
+                "operationId": "update_sheet_update_sheet_post",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "The user ID for which the data is requested",
+                            "title": "User Id"
+                        },
+                        "description": "The user ID for which the data is requested"
+                    },
+                    {
+                        "name": "spreadsheet_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "ID of the Google Sheet to fetch data from",
+                            "title": "Spreadsheet Id"
+                        },
+                        "description": "ID of the Google Sheet to fetch data from"
+                    },
+                    {
+                        "name": "title",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "The title of the sheet to update",
+                            "title": "Title"
+                        },
+                        "description": "The title of the sheet to update"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GoogleSheetValues"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/create-sheet": {
+            "post": {
+                "summary": "Create Sheet",
+                "description": "Create a new Google Sheet within the existing spreadsheet",
+                "operationId": "create_sheet_create_sheet_post",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "The user ID for which the data is requested",
+                            "title": "User Id"
+                        },
+                        "description": "The user ID for which the data is requested"
+                    },
+                    {
+                        "name": "spreadsheet_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "ID of the Google Sheet to fetch data from",
+                            "title": "Spreadsheet Id"
+                        },
+                        "description": "ID of the Google Sheet to fetch data from"
+                    },
+                    {
+                        "name": "title",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "The title of the new sheet",
+                            "title": "Title"
+                        },
+                        "description": "The title of the new sheet"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/get-all-file-names": {
+            "get": {
+                "summary": "Get All File Names",
+                "description": "Get all sheets associated with the user",
+                "operationId": "get_all_file_names_get_all_file_names_get",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "The user ID for which the data is requested",
+                            "title": "User Id"
+                        },
+                        "description": "The user ID for which the data is requested"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    },
+                                    "title": "Response Get All File Names Get All File Names Get"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/get-all-sheet-titles": {
+            "get": {
+                "summary": "Get All Sheet Titles",
+                "description": "Get all sheet titles within a Google Spreadsheet",
+                "operationId": "get_all_sheet_titles_get_all_sheet_titles_get",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "The user ID for which the data is requested",
+                            "title": "User Id"
+                        },
+                        "description": "The user ID for which the data is requested"
+                    },
+                    {
+                        "name": "spreadsheet_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "ID of the Google Sheet to fetch data from",
+                            "title": "Spreadsheet Id"
+                        },
+                        "description": "ID of the Google Sheet to fetch data from"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    },
+                                    "title": "Response Get All Sheet Titles Get All Sheet Titles Get"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/process-data": {
+            "post": {
+                "summary": "Process Data",
+                "description": "Process data to generate new ads or keywords based on the template",
+                "operationId": "process_data_process_data_post",
+                "parameters": [
+                    {
+                        "name": "target_resource",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "enum": [
+                                "ad",
+                                "keyword"
+                            ],
+                            "type": "string",
+                            "description": "The target resource to be updated",
+                            "title": "Target Resource"
+                        },
+                        "description": "The target resource to be updated"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Body_process_data_process_data_post"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GoogleSheetValues"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/process-spreadsheet": {
+            "post": {
+                "summary": "Process Spreadsheet",
+                "description": "Process data to generate new ads or keywords based on the template",
+                "operationId": "process_spreadsheet_process_spreadsheet_post",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "The user ID for which the data is requested",
+                            "title": "User Id"
+                        },
+                        "description": "The user ID for which the data is requested"
+                    },
+                    {
+                        "name": "template_spreadsheet_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "ID of the Google Sheet with the template data",
+                            "title": "Template Spreadsheet Id"
+                        },
+                        "description": "ID of the Google Sheet with the template data"
+                    },
+                    {
+                        "name": "template_sheet_title",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "The title of the sheet with the template data",
+                            "title": "Template Sheet Title"
+                        },
+                        "description": "The title of the sheet with the template data"
+                    },
+                    {
+                        "name": "new_campaign_spreadsheet_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "ID of the Google Sheet with the new campaign data",
+                            "title": "New Campaign Spreadsheet Id"
+                        },
+                        "description": "ID of the Google Sheet with the new campaign data"
+                    },
+                    {
+                        "name": "new_campaign_sheet_title",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "The title of the sheet with the new campaign data",
+                            "title": "New Campaign Sheet Title"
+                        },
+                        "description": "The title of the sheet with the new campaign data"
+                    },
+                    {
+                        "name": "target_resource",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "enum": [
+                                "ad",
+                                "keyword"
+                            ],
+                            "type": "string",
+                            "description": "The target resource to be updated",
+                            "title": "Target Resource"
+                        },
+                        "description": "The target resource to be updated"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Body_process_data_process_data_post": {
+                "properties": {
+                    "template_sheet_values": {
+                        "$ref": "#/components/schemas/GoogleSheetValues"
+                    },
+                    "new_campaign_sheet_values": {
+                        "$ref": "#/components/schemas/GoogleSheetValues"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "template_sheet_values",
+                    "new_campaign_sheet_values"
+                ],
+                "title": "Body_process_data_process_data_post"
+            },
+            "GoogleSheetValues": {
+                "properties": {
+                    "values": {
+                        "items": {
+                            "items": {},
+                            "type": "array"
+                        },
+                        "type": "array",
+                        "title": "Values",
+                        "description": "Values to be written to the Google Sheet."
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "values"
+                ],
+                "title": "GoogleSheetValues"
+            },
+            "HTTPValidationError": {
+                "properties": {
+                    "detail": {
+                        "items": {
+                            "$ref": "#/components/schemas/ValidationError"
+                        },
+                        "type": "array",
+                        "title": "Detail"
+                    }
+                },
+                "type": "object",
+                "title": "HTTPValidationError"
+            },
+            "ValidationError": {
+                "properties": {
+                    "loc": {
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        },
+                        "type": "array",
+                        "title": "Location"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "title": "Message"
+                    },
+                    "type": {
+                        "type": "string",
+                        "title": "Error Type"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "loc",
+                    "msg",
+                    "type"
+                ],
+                "title": "ValidationError"
+            }
+        }
+    }
+}

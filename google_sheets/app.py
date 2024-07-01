@@ -6,7 +6,7 @@ from typing import Annotated, Dict, List, Literal, Union
 
 import httpx
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Query, Request, Response, status
+from fastapi import FastAPI, HTTPException, Query, Response, status
 from fastapi.responses import RedirectResponse
 from googleapiclient.errors import HttpError
 
@@ -54,11 +54,12 @@ async def is_authenticated_for_ads(user_id: int) -> bool:
 
 
 # Route 1: Redirect to Google OAuth
-@app.get("/login")
+@app.get("/login", description="Get the URL to log in with Google")
 async def get_login_url(
-    request: Request,
-    user_id: int = Query(title="User ID"),
-    force_new_login: bool = Query(title="Force new login", default=False),
+    user_id: Annotated[
+        int, Query(description="The user ID for which the data is requested")
+    ],
+    force_new_login: Annotated[bool, Query(description="Force new login")] = False,
 ) -> Dict[str, str]:
     if not force_new_login:
         is_authenticated = await is_authenticated_for_ads(user_id=user_id)
@@ -70,7 +71,7 @@ async def get_login_url(
     return {"login_url": markdown_url}
 
 
-@app.get("/login/success")
+@app.get("/login/success", description="Get the success message after login")
 async def get_login_success() -> Dict[str, str]:
     return {"login_success": "You have successfully logged in"}
 
@@ -78,7 +79,10 @@ async def get_login_success() -> Dict[str, str]:
 # Route 2: Save user credentials/token to a JSON file
 @app.get("/login/callback")
 async def login_callback(
-    code: str = Query(title="Authorization Code"), state: str = Query(title="State")
+    code: Annotated[
+        str, Query(description="The authorization code received after successful login")
+    ],
+    state: Annotated[str, Query(description="State")],
 ) -> RedirectResponse:
     if not state.isdigit():
         raise HTTPException(status_code=400, detail="User ID must be an integer")
