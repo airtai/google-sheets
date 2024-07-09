@@ -1,11 +1,12 @@
-from typing import Optional, Union
+from typing import Any, Dict, Optional, Union
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from googleapiclient.errors import HttpError
 
-from google_sheets.app import app
+from google_sheets.app import _check_parameters_are_not_none, app
 from google_sheets.model import GoogleSheetValues
 
 client = TestClient(app)
@@ -290,3 +291,21 @@ class TestOpenAPIJSON:
 
         for key in expected_path_keys:
             assert key in paths
+
+
+class TestHelperFunctions:
+    @pytest.mark.parametrize(
+        ("endpoint_params", "raises_exception"),
+        [
+            ({"user_id": "123", "spreadsheet_id": "abc", "title": "Sheet1"}, False),
+            ({"user_id": "123", "spreadsheet_id": "abc", "title": None}, True),
+        ],
+    )
+    def test_check_parameters_are_not_none(
+        self, endpoint_params: Dict[str, Any], raises_exception: bool
+    ) -> None:
+        if raises_exception:
+            with pytest.raises(HTTPException):
+                _check_parameters_are_not_none(endpoint_params)
+        else:
+            _check_parameters_are_not_none(endpoint_params)
