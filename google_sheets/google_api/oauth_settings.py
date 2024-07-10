@@ -20,12 +20,13 @@ oauth2_settings = {
 }
 
 
-def get_google_oauth_url(user_id: int) -> str:
+def get_google_oauth_url(user_id: int, conv_uuid: str) -> str:
+    state = f"{user_id}:{conv_uuid}"
     google_oauth_url = (
         f"{oauth2_settings['auth_uri']}?client_id={oauth2_settings['clientId']}"
         f"&redirect_uri={oauth2_settings['redirectUri']}&response_type=code"
         f"&scope={urllib.parse.quote_plus('email https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.metadata.readonly')}"
-        f"&access_type=offline&prompt=consent&state={user_id}"
+        f"&access_type=offline&prompt=consent&state={state}"
     )
     return google_oauth_url
 

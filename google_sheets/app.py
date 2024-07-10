@@ -59,21 +59,20 @@ async def get_login_url(
     user_id: Annotated[
         int, Query(description="The user ID for which the data is requested")
     ],
+    conv_uuid: Annotated[
+        Optional[str], Query(description="The conversation UUID")
+    ] = None,
     force_new_login: Annotated[bool, Query(description="Force new login")] = False,
 ) -> Dict[str, str]:
+    _check_parameters_are_not_none({"conv_uuid": conv_uuid})
     if not force_new_login:
         is_authenticated = await is_authenticated_for_ads(user_id=user_id)
         if is_authenticated:
             return {"login_url": "User is already authenticated"}
 
-    google_oauth_url = get_google_oauth_url(user_id)
+    google_oauth_url = get_google_oauth_url(user_id, conv_uuid)  # type: ignore
     markdown_url = f"To navigate Google Ads waters, I require access to your account. Please [click here]({google_oauth_url}) to grant permission."
     return {"login_url": markdown_url}
-
-
-@app.get("/login/success", description="Get the success message after login")
-async def get_login_success() -> Dict[str, str]:
-    return {"login_success": "You have successfully logged in"}
 
 
 def _check_parameters_are_not_none(kwargs: Dict[str, Any]) -> None:
@@ -82,6 +81,9 @@ def _check_parameters_are_not_none(kwargs: Dict[str, Any]) -> None:
     if missing_parameters:
         error_message += ", ".join(missing_parameters)
         raise HTTPException(status_code=400, detail=error_message)
+
+
+REDIRECT_DOMAIN = environ.get("REDIRECT_DOMAIN", "http://localhost:3000")
 
 
 # Route 2: Save user credentials/token to a JSON file
@@ -94,9 +96,11 @@ async def login_callback(
     state: Annotated[Optional[str], Query(description="State")] = None,
 ) -> RedirectResponse:
     _check_parameters_are_not_none({"state": state})
-    if not state.isdigit():  # type: ignore
+    user_id_and_chat_uuid = state.split(":")  # type: ignore
+    if not user_id_and_chat_uuid[0].isdigit():  # type: ignore
         raise HTTPException(status_code=400, detail="User ID must be an integer")
-    user_id = int(state)  # type: ignore
+    user_id = int(user_id_and_chat_uuid[0])
+    chat_uuid = user_id_and_chat_uuid[1]
 
     token_request_data = get_token_request_data(code)
 
@@ -132,12 +136,9 @@ async def login_callback(
             },
         )
 
-    # redirect_domain = environ.get("REDIRECT_DOMAIN", "https://captn.ai")
-    # logged_in_message = "I have successfully logged in"
-    # redirect_uri = f"{redirect_domain}/chat/{chat_uuid}?msg={logged_in_message}"
-    # return RedirectResponse(redirect_uri)
-    # redirect to success page
-    return RedirectResponse(url=f"{base_url}/login/success")
+    logged_in_message = "I have successfully logged in"
+    redirect_uri = f"{REDIRECT_DOMAIN}/chat/{chat_uuid}?msg={logged_in_message}"
+    return RedirectResponse(redirect_uri)
 
 
 @app.get("/get-sheet", description="Get data from a Google Sheet")

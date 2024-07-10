@@ -278,7 +278,6 @@ class TestOpenAPIJSON:
         paths = response.json()["paths"]
         expected_path_keys = [
             "/login",
-            "/login/success",
             "/login/callback",
             "/get-sheet",
             "/update-sheet",
