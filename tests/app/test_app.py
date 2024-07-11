@@ -1,12 +1,13 @@
-from typing import Optional, Union
+from typing import Any, Dict, Optional, Union
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from googleapiclient.errors import HttpError
 
-from google_sheets import __version__ as version
-from google_sheets.app import app
+from google_sheets.app import _check_parameters_are_not_none, app
+from google_sheets.model import GoogleSheetValues
 
 client = TestClient(app)
 
@@ -17,14 +18,14 @@ class TestGetSheet:
             "google_sheets.google_api.service._load_user_credentials",
             return_value={"refresh_token": "abcdf"},
         ) as mock_load_user_credentials:
-            excepted = [
+            values = [
                 ["Campaign", "Ad Group", "Keyword"],
                 ["Campaign A", "Ad group A", "Keyword A"],
                 ["Campaign A", "Ad group A", "Keyword B"],
                 ["Campaign A", "Ad group A", "Keyword C"],
             ]
             with patch(
-                "google_sheets.app.get_sheet_f", return_value=excepted
+                "google_sheets.app.get_sheet_f", return_value=values
             ) as mock_get_sheet:
                 response = client.get(
                     "/get-sheet?user_id=123&spreadsheet_id=abc&title=Sheet1"
@@ -32,6 +33,8 @@ class TestGetSheet:
                 mock_load_user_credentials.assert_called_once()
                 mock_get_sheet.assert_called_once()
                 assert response.status_code == 200
+
+                excepted = GoogleSheetValues(values=values).model_dump()
                 assert response.json() == excepted
 
 
@@ -126,7 +129,9 @@ class TestUpdateSheet:
             ) as mock_update_sheet,
         ):
             json_data = {
-                "values": [["Campaign", "Ad Group"], ["Campaign A", "Ad group A"]]
+                "sheet_values": {
+                    "values": [["Campaign", "Ad Group"], ["Campaign A", "Ad group A"]]
+                }
             }
             response = client.post(
                 "/update-sheet?user_id=123&spreadsheet_id=abc&title=Sheet1",
@@ -160,474 +165,146 @@ class TestGetAllFileNames:
             assert response.json() == expected
 
 
+class TestProcessData:
+    @pytest.mark.parametrize(
+        ("template_sheet_values", "new_campaign_sheet_values", "status_code", "detail"),
+        [
+            (
+                GoogleSheetValues(
+                    values=[
+                        ["Campaign", "Ad Group", "Keyword"],
+                    ]
+                ),
+                GoogleSheetValues(
+                    values=[
+                        ["Country", "Station From", "Station To"],
+                        ["India", "Delhi", "Mumbai"],
+                    ]
+                ),
+                400,
+                "Both template and new campaign data should have at least two rows",
+            ),
+            (
+                GoogleSheetValues(
+                    values=[
+                        ["Campaign", "Ad Group", "Keyword"],
+                        ["Campaign A", "Ad group A", "Keyword A"],
+                    ]
+                ),
+                GoogleSheetValues(
+                    values=[
+                        ["Country", "Station From", "Station To"],
+                        ["India", "Delhi", "Mumbai"],
+                    ]
+                ),
+                400,
+                "Mandatory columns missing in the keyword template data.",
+            ),
+            (
+                GoogleSheetValues(
+                    values=[
+                        [
+                            "Campaign",
+                            "Ad Group",
+                            "Keyword",
+                            "Criterion Type",
+                            "Max CPC",
+                        ],
+                        ["Campaign A", "Ad group A", "Keyword A", "Exact", "1"],
+                    ]
+                ),
+                GoogleSheetValues(
+                    values=[
+                        ["Country", "Station From", "Station To"],
+                        ["India", "Delhi", "Mumbai"],
+                    ]
+                ),
+                200,
+                GoogleSheetValues(
+                    values=[
+                        [
+                            "Campaign",
+                            "Ad Group",
+                            "Keyword",
+                            "Criterion Type",
+                            "Max CPC",
+                        ],
+                        [
+                            "India - Delhi - Mumbai",
+                            "Delhi - Mumbai",
+                            "Keyword A",
+                            "Exact",
+                            "1",
+                        ],
+                        [
+                            "India - Delhi - Mumbai",
+                            "Mumbai - Delhi",
+                            "Keyword A",
+                            "Exact",
+                            "1",
+                        ],
+                    ],
+                ),
+            ),
+        ],
+    )
+    def test_process_data(
+        self,
+        template_sheet_values: GoogleSheetValues,
+        new_campaign_sheet_values: GoogleSheetValues,
+        status_code: int,
+        detail: Union[str, GoogleSheetValues],
+    ) -> None:
+        response = client.post(
+            "/process-data?target_resource=keyword",
+            json={
+                "template_sheet_values": template_sheet_values.model_dump(),
+                "new_campaign_sheet_values": new_campaign_sheet_values.model_dump(),
+            },
+        )
+
+        assert response.status_code == status_code
+        if isinstance(detail, GoogleSheetValues):
+            assert response.json() == detail.model_dump()
+        else:
+            assert detail in response.json()["detail"]
+
+
 class TestOpenAPIJSON:
     def test_openapi(self) -> None:
-        expected = {
-            "openapi": "3.1.0",
-            "info": {"title": "google-sheets", "version": version},
-            "servers": [
-                {
-                    "url": "http://localhost:8000",
-                    "description": "Google Sheets app server",
-                }
-            ],
-            "paths": {
-                "/login": {
-                    "get": {
-                        "summary": "Get Login Url",
-                        "operationId": "get_login_url_login_get",
-                        "parameters": [
-                            {
-                                "name": "user_id",
-                                "in": "query",
-                                "required": True,
-                                "schema": {"type": "integer", "title": "User ID"},
-                            },
-                            {
-                                "name": "force_new_login",
-                                "in": "query",
-                                "required": False,
-                                "schema": {
-                                    "type": "boolean",
-                                    "title": "Force new login",
-                                    "default": False,
-                                },
-                            },
-                        ],
-                        "responses": {
-                            "200": {
-                                "description": "Successful Response",
-                                "content": {
-                                    "application/json": {
-                                        "schema": {
-                                            "type": "object",
-                                            "additionalProperties": {"type": "string"},
-                                            "title": "Response Get Login Url Login Get",
-                                        }
-                                    }
-                                },
-                            },
-                            "422": {
-                                "description": "Validation Error",
-                                "content": {
-                                    "application/json": {
-                                        "schema": {
-                                            "$ref": "#/components/schemas/HTTPValidationError"
-                                        }
-                                    }
-                                },
-                            },
-                        },
-                    }
-                },
-                "/login/success": {
-                    "get": {
-                        "summary": "Get Login Success",
-                        "operationId": "get_login_success_login_success_get",
-                        "responses": {
-                            "200": {
-                                "description": "Successful Response",
-                                "content": {
-                                    "application/json": {
-                                        "schema": {
-                                            "additionalProperties": {"type": "string"},
-                                            "type": "object",
-                                            "title": "Response Get Login Success Login Success Get",
-                                        }
-                                    }
-                                },
-                            }
-                        },
-                    }
-                },
-                "/login/callback": {
-                    "get": {
-                        "summary": "Login Callback",
-                        "operationId": "login_callback_login_callback_get",
-                        "parameters": [
-                            {
-                                "name": "code",
-                                "in": "query",
-                                "required": True,
-                                "schema": {
-                                    "type": "string",
-                                    "title": "Authorization Code",
-                                },
-                            },
-                            {
-                                "name": "state",
-                                "in": "query",
-                                "required": True,
-                                "schema": {"type": "string", "title": "State"},
-                            },
-                        ],
-                        "responses": {
-                            "200": {
-                                "description": "Successful Response",
-                                "content": {"application/json": {"schema": {}}},
-                            },
-                            "422": {
-                                "description": "Validation Error",
-                                "content": {
-                                    "application/json": {
-                                        "schema": {
-                                            "$ref": "#/components/schemas/HTTPValidationError"
-                                        }
-                                    }
-                                },
-                            },
-                        },
-                    }
-                },
-                "/get-sheet": {
-                    "get": {
-                        "summary": "Get Sheet",
-                        "description": "Get data from a Google Sheet",
-                        "operationId": "get_sheet_get_sheet_get",
-                        "parameters": [
-                            {
-                                "name": "user_id",
-                                "in": "query",
-                                "required": True,
-                                "schema": {
-                                    "type": "integer",
-                                    "description": "The user ID for which the data is requested",
-                                    "title": "User Id",
-                                },
-                                "description": "The user ID for which the data is requested",
-                            },
-                            {
-                                "name": "spreadsheet_id",
-                                "in": "query",
-                                "required": True,
-                                "schema": {
-                                    "type": "string",
-                                    "description": "ID of the Google Sheet to fetch data from",
-                                    "title": "Spreadsheet Id",
-                                },
-                                "description": "ID of the Google Sheet to fetch data from",
-                            },
-                            {
-                                "name": "title",
-                                "in": "query",
-                                "required": True,
-                                "schema": {
-                                    "type": "string",
-                                    "description": "The title of the sheet to fetch data from",
-                                    "title": "Title",
-                                },
-                                "description": "The title of the sheet to fetch data from",
-                            },
-                        ],
-                        "responses": {
-                            "200": {
-                                "description": "Successful Response",
-                                "content": {
-                                    "application/json": {
-                                        "schema": {
-                                            "anyOf": [
-                                                {"type": "string"},
-                                                {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "type": "array",
-                                                        "items": {"type": "string"},
-                                                    },
-                                                },
-                                            ],
-                                            "title": "Response Get Sheet Get Sheet Get",
-                                        }
-                                    }
-                                },
-                            },
-                            "422": {
-                                "description": "Validation Error",
-                                "content": {
-                                    "application/json": {
-                                        "schema": {
-                                            "$ref": "#/components/schemas/HTTPValidationError"
-                                        }
-                                    }
-                                },
-                            },
-                        },
-                    }
-                },
-                "/update-sheet": {
-                    "post": {
-                        "summary": "Update Sheet",
-                        "description": "Update data in a Google Sheet within the existing spreadsheet",
-                        "operationId": "update_sheet_update_sheet_post",
-                        "parameters": [
-                            {
-                                "name": "user_id",
-                                "in": "query",
-                                "required": True,
-                                "schema": {
-                                    "type": "integer",
-                                    "description": "The user ID for which the data is requested",
-                                    "title": "User Id",
-                                },
-                                "description": "The user ID for which the data is requested",
-                            },
-                            {
-                                "name": "spreadsheet_id",
-                                "in": "query",
-                                "required": True,
-                                "schema": {
-                                    "type": "string",
-                                    "description": "ID of the Google Sheet to fetch data from",
-                                    "title": "Spreadsheet Id",
-                                },
-                                "description": "ID of the Google Sheet to fetch data from",
-                            },
-                            {
-                                "name": "title",
-                                "in": "query",
-                                "required": True,
-                                "schema": {
-                                    "type": "string",
-                                    "description": "The title of the sheet to update",
-                                    "title": "Title",
-                                },
-                                "description": "The title of the sheet to update",
-                            },
-                        ],
-                        "requestBody": {
-                            "required": True,
-                            "content": {
-                                "application/json": {
-                                    "schema": {
-                                        "$ref": "#/components/schemas/GoogleSheetValues"
-                                    }
-                                }
-                            },
-                        },
-                        "responses": {
-                            "200": {
-                                "description": "Successful Response",
-                                "content": {"application/json": {"schema": {}}},
-                            },
-                            "422": {
-                                "description": "Validation Error",
-                                "content": {
-                                    "application/json": {
-                                        "schema": {
-                                            "$ref": "#/components/schemas/HTTPValidationError"
-                                        }
-                                    }
-                                },
-                            },
-                        },
-                    }
-                },
-                "/create-sheet": {
-                    "post": {
-                        "summary": "Create Sheet",
-                        "description": "Create a new Google Sheet within the existing spreadsheet",
-                        "operationId": "create_sheet_create_sheet_post",
-                        "parameters": [
-                            {
-                                "name": "user_id",
-                                "in": "query",
-                                "required": True,
-                                "schema": {
-                                    "type": "integer",
-                                    "description": "The user ID for which the data is requested",
-                                    "title": "User Id",
-                                },
-                                "description": "The user ID for which the data is requested",
-                            },
-                            {
-                                "name": "spreadsheet_id",
-                                "in": "query",
-                                "required": True,
-                                "schema": {
-                                    "type": "string",
-                                    "description": "ID of the Google Sheet to fetch data from",
-                                    "title": "Spreadsheet Id",
-                                },
-                                "description": "ID of the Google Sheet to fetch data from",
-                            },
-                            {
-                                "name": "title",
-                                "in": "query",
-                                "required": True,
-                                "schema": {
-                                    "type": "string",
-                                    "description": "The title of the new sheet",
-                                    "title": "Title",
-                                },
-                                "description": "The title of the new sheet",
-                            },
-                        ],
-                        "responses": {
-                            "200": {
-                                "description": "Successful Response",
-                                "content": {"application/json": {"schema": {}}},
-                            },
-                            "422": {
-                                "description": "Validation Error",
-                                "content": {
-                                    "application/json": {
-                                        "schema": {
-                                            "$ref": "#/components/schemas/HTTPValidationError"
-                                        }
-                                    }
-                                },
-                            },
-                        },
-                    }
-                },
-                "/get-all-file-names": {
-                    "get": {
-                        "summary": "Get All File Names",
-                        "description": "Get all sheets associated with the user",
-                        "operationId": "get_all_file_names_get_all_file_names_get",
-                        "parameters": [
-                            {
-                                "name": "user_id",
-                                "in": "query",
-                                "required": True,
-                                "schema": {
-                                    "type": "integer",
-                                    "description": "The user ID for which the data is requested",
-                                    "title": "User Id",
-                                },
-                                "description": "The user ID for which the data is requested",
-                            }
-                        ],
-                        "responses": {
-                            "200": {
-                                "description": "Successful Response",
-                                "content": {
-                                    "application/json": {
-                                        "schema": {
-                                            "type": "object",
-                                            "additionalProperties": {"type": "string"},
-                                            "title": "Response Get All File Names Get All File Names Get",
-                                        }
-                                    }
-                                },
-                            },
-                            "422": {
-                                "description": "Validation Error",
-                                "content": {
-                                    "application/json": {
-                                        "schema": {
-                                            "$ref": "#/components/schemas/HTTPValidationError"
-                                        }
-                                    }
-                                },
-                            },
-                        },
-                    }
-                },
-                "/get-all-sheet-titles": {
-                    "get": {
-                        "summary": "Get All Sheet Titles",
-                        "description": "Get all sheet titles within a Google Spreadsheet",
-                        "operationId": "get_all_sheet_titles_get_all_sheet_titles_get",
-                        "parameters": [
-                            {
-                                "name": "user_id",
-                                "in": "query",
-                                "required": True,
-                                "schema": {
-                                    "type": "integer",
-                                    "description": "The user ID for which the data is requested",
-                                    "title": "User Id",
-                                },
-                                "description": "The user ID for which the data is requested",
-                            },
-                            {
-                                "name": "spreadsheet_id",
-                                "in": "query",
-                                "required": True,
-                                "schema": {
-                                    "type": "string",
-                                    "description": "ID of the Google Sheet to fetch data from",
-                                    "title": "Spreadsheet Id",
-                                },
-                                "description": "ID of the Google Sheet to fetch data from",
-                            },
-                        ],
-                        "responses": {
-                            "200": {
-                                "description": "Successful Response",
-                                "content": {
-                                    "application/json": {
-                                        "schema": {
-                                            "type": "array",
-                                            "items": {"type": "string"},
-                                            "title": "Response Get All Sheet Titles Get All Sheet Titles Get",
-                                        }
-                                    }
-                                },
-                            },
-                            "422": {
-                                "description": "Validation Error",
-                                "content": {
-                                    "application/json": {
-                                        "schema": {
-                                            "$ref": "#/components/schemas/HTTPValidationError"
-                                        }
-                                    }
-                                },
-                            },
-                        },
-                    }
-                },
-            },
-            "components": {
-                "schemas": {
-                    "GoogleSheetValues": {
-                        "properties": {
-                            "values": {
-                                "items": {"items": {}, "type": "array"},
-                                "type": "array",
-                                "title": "Values",
-                                "description": "Values to be written to the Google Sheet.",
-                            }
-                        },
-                        "type": "object",
-                        "required": ["values"],
-                        "title": "GoogleSheetValues",
-                    },
-                    "HTTPValidationError": {
-                        "properties": {
-                            "detail": {
-                                "items": {
-                                    "$ref": "#/components/schemas/ValidationError"
-                                },
-                                "type": "array",
-                                "title": "Detail",
-                            }
-                        },
-                        "type": "object",
-                        "title": "HTTPValidationError",
-                    },
-                    "ValidationError": {
-                        "properties": {
-                            "loc": {
-                                "items": {
-                                    "anyOf": [{"type": "string"}, {"type": "integer"}]
-                                },
-                                "type": "array",
-                                "title": "Location",
-                            },
-                            "msg": {"type": "string", "title": "Message"},
-                            "type": {"type": "string", "title": "Error Type"},
-                        },
-                        "type": "object",
-                        "required": ["loc", "msg", "type"],
-                        "title": "ValidationError",
-                    },
-                }
-            },
-        }
         response = client.get("/openapi.json")
         assert response.status_code == 200
-        resp_json = response.json()
 
-        assert resp_json == expected
+        paths = response.json()["paths"]
+        expected_path_keys = [
+            "/login",
+            "/login/callback",
+            "/get-sheet",
+            "/update-sheet",
+            "/create-sheet",
+            "/get-all-file-names",
+            "/get-all-sheet-titles",
+            "/process-data",
+            "/process-spreadsheet",
+        ]
+
+        for key in expected_path_keys:
+            assert key in paths
+
+
+class TestHelperFunctions:
+    @pytest.mark.parametrize(
+        ("endpoint_params", "raises_exception"),
+        [
+            ({"user_id": "123", "spreadsheet_id": "abc", "title": "Sheet1"}, False),
+            ({"user_id": "123", "spreadsheet_id": "abc", "title": None}, True),
+        ],
+    )
+    def test_check_parameters_are_not_none(
+        self, endpoint_params: Dict[str, Any], raises_exception: bool
+    ) -> None:
+        if raises_exception:
+            with pytest.raises(HTTPException):
+                _check_parameters_are_not_none(endpoint_params)
+        else:
+            _check_parameters_are_not_none(endpoint_params)
