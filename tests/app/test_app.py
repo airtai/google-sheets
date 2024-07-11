@@ -178,8 +178,20 @@ class TestProcessData:
                 ),
                 GoogleSheetValues(
                     values=[
-                        ["Country", "Station From", "Station To"],
-                        ["India", "Delhi", "Mumbai"],
+                        [
+                            "Country",
+                            "Station From",
+                            "Station To",
+                            "Final Url From",
+                            "Final Url To",
+                        ],
+                        [
+                            "India",
+                            "Delhi",
+                            "Mumbai",
+                            "https://www.example.com/from",
+                            "https://www.example.com/to",
+                        ],
                     ]
                 ),
                 "Both template and new campaign data should have at least two rows",
@@ -193,8 +205,20 @@ class TestProcessData:
                 ),
                 GoogleSheetValues(
                     values=[
-                        ["Country", "Station From", "Station To"],
-                        ["India", "Delhi", "Mumbai"],
+                        [
+                            "Country",
+                            "Station From",
+                            "Station To",
+                            "Final Url From",
+                            "Final Url To",
+                        ],
+                        [
+                            "India",
+                            "Delhi",
+                            "Mumbai",
+                            "https://www.example.com/from",
+                            "https://www.example.com/to",
+                        ],
                     ]
                 ),
                 "Mandatory columns missing in the keyword template data.",
@@ -210,8 +234,20 @@ class TestProcessData:
                 ),
                 GoogleSheetValues(
                     values=[
-                        ["Country", "Station From", "Station To"],
-                        ["India", "Delhi", "Mumbai"],
+                        [
+                            "Country",
+                            "Station From",
+                            "Station To",
+                            "Final Url From",
+                            "Final Url To",
+                        ],
+                        [
+                            "India",
+                            "Delhi",
+                            "Mumbai",
+                            "https://www.example.com/from",
+                            "https://www.example.com/to",
+                        ],
                     ]
                 ),
                 GoogleSheetValues(
@@ -219,7 +255,7 @@ class TestProcessData:
                         [
                             "Campaign Name",
                             "Ad Group Name",
-                            "Criterion Type",
+                            "Match Type",
                             "Keyword",
                         ],
                         [
@@ -252,7 +288,7 @@ class TestProcessData:
                     "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO"
                 ],
                 "Ad Group Name": ["INSERT_STATION_FROM - INSERT_STATION_TO"],
-                "Criterion Type": ["Exact"],
+                "Match Type": ["Exact"],
             }
         )
         if isinstance(detail, GoogleSheetValues):

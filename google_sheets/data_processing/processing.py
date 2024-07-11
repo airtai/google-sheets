@@ -1,4 +1,4 @@
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 import pandas as pd
 
@@ -32,6 +32,7 @@ def process_data_f(
     merged_campaigns_ad_groups_df: pd.DataFrame,
     template_df: pd.DataFrame,
     new_campaign_df: pd.DataFrame,
+    target_resource: Optional[str] = None,
 ) -> pd.DataFrame:
     template_df = pd.merge(merged_campaigns_ad_groups_df, template_df, how="cross")
     final_df = pd.DataFrame(columns=template_df.columns)
@@ -48,6 +49,10 @@ def process_data_f(
                     "Station To": new_campaign_row["Station From"],
                 },
             ]
+            if target_resource == "ad":
+                stations[0]["Final Url"] = new_campaign_row["Final Url From"]
+                stations[1]["Final Url"] = new_campaign_row["Final Url To"]
+
             for station in stations:
                 new_row = template_row.copy()
                 new_row["Campaign Name"] = new_row["Campaign Name"].replace(
@@ -60,9 +65,8 @@ def process_data_f(
                     INSERT_STATION_TO, new_campaign_row["Station To"]
                 )
 
-                # Within "Ad Group Name" column replace INSERT_CRITERION_TYPE with the value from the new_row["Criterion Type"] column
                 new_row["Ad Group Name"] = new_row["Ad Group Name"].replace(
-                    INSERT_CRITERION_TYPE, new_row["Criterion Type"]
+                    INSERT_CRITERION_TYPE, new_row["Match Type"]
                 )
 
                 new_row = new_row.str.replace(
@@ -73,9 +77,16 @@ def process_data_f(
                 )
                 new_row = new_row.str.replace(INSERT_STATION_TO, station["Station To"])
 
+                if target_resource == "ad":
+                    new_row["Final URL"] = station["Final Url"]
+
                 final_df = pd.concat(
                     [final_df, pd.DataFrame([new_row])], ignore_index=True
                 )
+
+    final_df = final_df.sort_values(
+        by=["Campaign Name", "Ad Group Name"], ignore_index=True
+    )
 
     return final_df
 

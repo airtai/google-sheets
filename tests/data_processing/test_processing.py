@@ -60,7 +60,7 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
                         "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO"
                     ],
                     "Ad Group Name": ["INSERT_STATION_FROM - INSERT_STATION_TO"],
-                    "Criterion Type": ["Exact"],
+                    "Match Type": ["Exact"],
                 }
             ),
             pd.DataFrame(
@@ -110,7 +110,7 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
                         "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO"
                     ],
                     "Ad Group Name": ["INSERT_STATION_FROM - INSERT_STATION_TO"],
-                    "Criterion Type": ["Exact"],
+                    "Match Type": ["Exact"],
                 }
             ),
             pd.DataFrame(

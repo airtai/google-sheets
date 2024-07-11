@@ -297,14 +297,19 @@ async def get_all_sheet_titles(
     return sheets
 
 
-NEW_CAMPAIGN_MANDATORY_COLUMNS = ["Country", "Station From", "Station To"]
+NEW_CAMPAIGN_MANDATORY_COLUMNS = [
+    "Country",
+    "Station From",
+    "Station To",
+    "Final Url From",
+    "Final Url To",
+]
 MANDATORY_AD_TEMPLATE_COLUMNS = [
     "Headline 1",
     "Headline 2",
     "Headline 3",
     "Description Line 1",
     "Description Line 2",
-    "Final Url",
 ]
 
 MANDATORY_KEYWORD_TEMPLATE_COLUMNS = [
@@ -373,7 +378,10 @@ async def process_data(
         )
 
     processed_df = process_data_f(
-        merged_campaigns_ad_groups_df, template_df, new_campaign_df
+        merged_campaigns_ad_groups_df,
+        template_df,
+        new_campaign_df,
+        target_resource=target_resource,
     )
 
     validated_df = validate_output_data(
