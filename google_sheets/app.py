@@ -443,10 +443,6 @@ async def process_spreadsheet(
         Optional[str],
         Query(description="ID of the Google Sheet with the template data"),
     ] = None,
-    template_sheet_title: Annotated[
-        Optional[str],
-        Query(description="The title of the sheet with the template data"),
-    ] = None,
     new_campaign_spreadsheet_id: Annotated[
         Optional[str],
         Query(description="ID of the Google Sheet with the new campaign data"),
@@ -455,27 +451,13 @@ async def process_spreadsheet(
         Optional[str],
         Query(description="The title of the sheet with the new campaign data"),
     ] = None,
-    target_resource: Annotated[
-        Optional[str],
-        Query(
-            description="The target resource to be updated, options: 'ad' or 'keyword'"
-        ),
-    ] = None,
 ) -> str:
     _check_parameters_are_not_none(
         {
             "template_spreadsheet_id": template_spreadsheet_id,
-            "template_sheet_title": template_sheet_title,
             "new_campaign_spreadsheet_id": new_campaign_spreadsheet_id,
             "new_campaign_sheet_title": new_campaign_sheet_title,
-            "target_resource": target_resource,
         }
-    )
-    _validate_target_resource(target_resource)
-    template_values = await get_sheet(
-        user_id=user_id,
-        spreadsheet_id=template_spreadsheet_id,
-        title=template_sheet_title,
     )
     new_campaign_values = await get_sheet(
         user_id=user_id,
@@ -483,6 +465,16 @@ async def process_spreadsheet(
         title=new_campaign_sheet_title,
     )
     try:
+        ads_template_values = await get_sheet(
+            user_id=user_id,
+            spreadsheet_id=template_spreadsheet_id,
+            title="Ads",
+        )
+        keywords_template_values = await get_sheet(
+            user_id=user_id,
+            spreadsheet_id=template_spreadsheet_id,
+            title="Keywords",
+        )
         campaign_template_values = await get_sheet(
             user_id=user_id, spreadsheet_id=template_spreadsheet_id, title="Campaigns"
         )
@@ -494,7 +486,7 @@ async def process_spreadsheet(
         ) or not isinstance(ad_group_template_values, GoogleSheetValues):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"""Please provide Campaigns and Ad Groups tables in the template spreadsheet with id '{template_spreadsheet_id}'""",
+                detail=f"""Please provide Campaigns, Ad Groups, Ads and KEywords tables in the template spreadsheet with id '{template_spreadsheet_id}'""",
             )
 
         merged_campaigns_ad_groups_df = await process_campaigns_and_ad_groups(
@@ -505,43 +497,49 @@ async def process_spreadsheet(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"""Unable to read from the 'Campaigns' and 'Ad Groups' sheets in the template spreadsheet with id '{template_spreadsheet_id}'
-Make sure these tables exist in the template spreadsheet""",
+            detail=f"""Make sure tables 'Campaigns', 'Ad Groups', 'Ads' and 'Keywords' are present in the template spreadsheet with id '{template_spreadsheet_id}'.""",
         ) from e
 
-    if not isinstance(template_values, GoogleSheetValues) or not isinstance(
-        new_campaign_values, GoogleSheetValues
+    if (
+        not isinstance(ads_template_values, GoogleSheetValues)
+        or not isinstance(keywords_template_values, GoogleSheetValues)
+        or not isinstance(new_campaign_values, GoogleSheetValues)
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"""Invalid data format.
-template_values: {template_values}
+ads_template_values: {ads_template_values}
+
+keywords_template_values: {keywords_template_values}
 
 new_campaign_values: {new_campaign_values}
 
 Please provide data in the correct format.""",
         )
 
-    processed_values = await process_data(
-        template_sheet_values=template_values,
-        new_campaign_sheet_values=new_campaign_values,
-        merged_campaigns_ad_groups_df=merged_campaigns_ad_groups_df,
-        target_resource=target_resource,  # type: ignore
-    )
+    response = ""
+    for template_values, target_resource in zip(
+        [ads_template_values, keywords_template_values], ["ad", "keyword"]
+    ):
+        processed_values = await process_data(
+            template_sheet_values=template_values,
+            new_campaign_sheet_values=new_campaign_values,
+            merged_campaigns_ad_groups_df=merged_campaigns_ad_groups_df,
+            target_resource=target_resource,
+        )
 
-    title = (
-        f"Captn - {target_resource.capitalize()}s {datetime.now():%Y-%m-%d %H:%M:%S}"  # type: ignore
-    )
-    await create_sheet(
-        user_id=user_id,
-        spreadsheet_id=new_campaign_spreadsheet_id,
-        title=title,
-    )
-    await update_sheet(
-        user_id=user_id,
-        spreadsheet_id=new_campaign_spreadsheet_id,
-        title=title,
-        sheet_values=processed_values,
-    )
+        title = f"Captn - {target_resource.capitalize()}s {datetime.now():%Y-%m-%d %H:%M:%S}"  # type: ignore
+        await create_sheet(
+            user_id=user_id,
+            spreadsheet_id=new_campaign_spreadsheet_id,
+            title=title,
+        )
+        await update_sheet(
+            user_id=user_id,
+            spreadsheet_id=new_campaign_spreadsheet_id,
+            title=title,
+            sheet_values=processed_values,
+        )
+        response += f"Sheet with the name '{title}' has been created successfully.\n"
 
-    return f"Sheet with the name 'Captn - {target_resource.capitalize()}s' has been created successfully."  # type: ignore
+    return response
