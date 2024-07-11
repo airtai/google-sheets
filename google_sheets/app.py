@@ -48,9 +48,7 @@ async def is_authenticated_for_ads(user_id: int) -> bool:
     async with get_db_connection() as db:
         data = await db.gauth.find_unique(where={"user_id": user_id})
 
-    if not data:
-        return False
-    return True
+    return bool(data)
 
 
 # Route 1: Redirect to Google OAuth
