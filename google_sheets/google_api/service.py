@@ -71,8 +71,14 @@ def get_files_f(service: Any) -> List[Dict[str, str]]:
 def get_sheet_f(service: Any, spreadsheet_id: str, range: str) -> Any:
     # Call the Sheets API
     sheet = service.spreadsheets()
-    result = sheet.values().get(spreadsheetId=spreadsheet_id, range=range).execute()
-    values = result.get("values", [])
+    try:
+        result = sheet.values().get(spreadsheetId=spreadsheet_id, range=range).execute()
+        values = result.get("values", [])
+    except Exception as e:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Unable to read from spreadsheet with id '{spreadsheet_id}', and range '{range}'",
+        ) from e
 
     return values
 

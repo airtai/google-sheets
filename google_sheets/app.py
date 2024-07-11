@@ -299,8 +299,6 @@ async def get_all_sheet_titles(
 
 NEW_CAMPAIGN_MANDATORY_COLUMNS = ["Country", "Station From", "Station To"]
 MANDATORY_AD_TEMPLATE_COLUMNS = [
-    "Campaign",
-    "Ad Group",
     "Headline 1",
     "Headline 2",
     "Headline 3",
@@ -310,11 +308,7 @@ MANDATORY_AD_TEMPLATE_COLUMNS = [
 ]
 
 MANDATORY_KEYWORD_TEMPLATE_COLUMNS = [
-    "Campaign",
-    "Ad Group",
     "Keyword",
-    "Criterion Type",
-    "Max CPC",
 ]
 
 
@@ -326,40 +320,12 @@ def _validate_target_resource(target_resource: Optional[str]) -> None:
         )
 
 
-@app.post(
-    "/process-data",
-    description="Process data to generate new ads or keywords based on the template",
-)
 async def process_data(
-    template_sheet_values: Annotated[
-        Optional[GoogleSheetValues],
-        Body(
-            embed=True,
-            description="Template values to be used for generating new ads or keywords",
-        ),
-    ] = None,
-    new_campaign_sheet_values: Annotated[
-        Optional[GoogleSheetValues],
-        Body(
-            embed=True,
-            description="New campaign values to be used for generating new ads or keywords",
-        ),
-    ] = None,
-    target_resource: Annotated[
-        Optional[str],
-        Query(
-            description="The target resource to be updated. This can be 'ad' or 'keyword'"
-        ),
-    ] = None,
+    template_sheet_values: GoogleSheetValues,
+    new_campaign_sheet_values: GoogleSheetValues,
+    merged_campaigns_ad_groups_df: pd.DataFrame,
+    target_resource: str,
 ) -> GoogleSheetValues:
-    _check_parameters_are_not_none(
-        {
-            "template_sheet_values": template_sheet_values,
-            "new_campaign_sheet_values": new_campaign_sheet_values,
-            "target_resource": target_resource,
-        }
-    )
-    _validate_target_resource(target_resource)
     if (
         len(template_sheet_values.values) < 2  # type: ignore
         or len(new_campaign_sheet_values.values) < 2  # type: ignore
@@ -406,7 +372,9 @@ async def process_data(
             status_code=status.HTTP_400_BAD_REQUEST, detail=validation_error_msg
         )
 
-    processed_df = process_data_f(template_df, new_campaign_df)
+    processed_df = process_data_f(
+        merged_campaigns_ad_groups_df, template_df, new_campaign_df
+    )
 
     validated_df = validate_output_data(
         processed_df,
@@ -416,6 +384,43 @@ async def process_data(
     values = [validated_df.columns.tolist(), *validated_df.values.tolist()]
 
     return GoogleSheetValues(values=values)
+
+
+async def process_campaigns_and_ad_groups(
+    campaign_template_values: GoogleSheetValues,
+    ad_group_template_values: GoogleSheetValues,
+) -> pd.DataFrame:
+    _check_parameters_are_not_none(
+        {
+            "campaign_template_values": campaign_template_values,
+            "ad_group_template_values": ad_group_template_values,
+        }
+    )
+    if (
+        len(campaign_template_values.values) < 2  # type: ignore
+        or len(ad_group_template_values.values) < 2  # type: ignore
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Both template campaigns and ad groups data should have at least two rows (header and data).",
+        )
+
+    try:
+        campaign_template_df = pd.DataFrame(
+            campaign_template_values.values[1:],  # type: ignore
+            columns=campaign_template_values.values[0],  # type: ignore
+        )
+        ad_group_template_df = pd.DataFrame(
+            ad_group_template_values.values[1:],  # type: ignore
+            columns=ad_group_template_values.values[0],  # type: ignore
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid data format. Please provide data in the correct format: {e}",
+        ) from e
+
+    return pd.merge(campaign_template_df, ad_group_template_df, how="cross")
 
 
 @app.post(
@@ -469,6 +474,32 @@ async def process_spreadsheet(
         spreadsheet_id=new_campaign_spreadsheet_id,
         title=new_campaign_sheet_title,
     )
+    try:
+        campaign_template_values = await get_sheet(
+            user_id=user_id, spreadsheet_id=template_spreadsheet_id, title="Campaigns"
+        )
+        ad_group_template_values = await get_sheet(
+            user_id=user_id, spreadsheet_id=template_spreadsheet_id, title="Ad Groups"
+        )
+        if not isinstance(
+            campaign_template_values, GoogleSheetValues
+        ) or not isinstance(ad_group_template_values, GoogleSheetValues):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"""Please provide Campaigns and Ad Groups tables in the template spreadsheet with id '{template_spreadsheet_id}'""",
+            )
+
+        merged_campaigns_ad_groups_df = await process_campaigns_and_ad_groups(
+            campaign_template_values=campaign_template_values,
+            ad_group_template_values=ad_group_template_values,
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"""Unable to read from the 'Campaigns' and 'Ad Groups' sheets in the template spreadsheet with id '{template_spreadsheet_id}'
+Make sure these tables exist in the template spreadsheet""",
+        ) from e
 
     if not isinstance(template_values, GoogleSheetValues) or not isinstance(
         new_campaign_values, GoogleSheetValues
@@ -486,7 +517,8 @@ Please provide data in the correct format.""",
     processed_values = await process_data(
         template_sheet_values=template_values,
         new_campaign_sheet_values=new_campaign_values,
-        target_resource=target_resource,
+        merged_campaigns_ad_groups_df=merged_campaigns_ad_groups_df,
+        target_resource=target_resource,  # type: ignore
     )
 
     title = (

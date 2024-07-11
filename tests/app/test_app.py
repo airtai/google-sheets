@@ -1,12 +1,13 @@
 from typing import Any, Dict, Optional, Union
 from unittest.mock import MagicMock, patch
 
+import pandas as pd
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from googleapiclient.errors import HttpError
 
-from google_sheets.app import _check_parameters_are_not_none, app
+from google_sheets.app import _check_parameters_are_not_none, app, process_data
 from google_sheets.model import GoogleSheetValues
 
 client = TestClient(app)
@@ -167,12 +168,12 @@ class TestGetAllFileNames:
 
 class TestProcessData:
     @pytest.mark.parametrize(
-        ("template_sheet_values", "new_campaign_sheet_values", "status_code", "detail"),
+        ("template_sheet_values", "new_campaign_sheet_values", "detail"),
         [
             (
                 GoogleSheetValues(
                     values=[
-                        ["Campaign", "Ad Group", "Keyword"],
+                        ["Keyword"],
                     ]
                 ),
                 GoogleSheetValues(
@@ -181,14 +182,13 @@ class TestProcessData:
                         ["India", "Delhi", "Mumbai"],
                     ]
                 ),
-                400,
                 "Both template and new campaign data should have at least two rows",
             ),
             (
                 GoogleSheetValues(
                     values=[
-                        ["Campaign", "Ad Group", "Keyword"],
-                        ["Campaign A", "Ad group A", "Keyword A"],
+                        ["Fake column"],
+                        ["fake"],
                     ]
                 ),
                 GoogleSheetValues(
@@ -197,20 +197,15 @@ class TestProcessData:
                         ["India", "Delhi", "Mumbai"],
                     ]
                 ),
-                400,
                 "Mandatory columns missing in the keyword template data.",
             ),
             (
                 GoogleSheetValues(
                     values=[
                         [
-                            "Campaign",
-                            "Ad Group",
                             "Keyword",
-                            "Criterion Type",
-                            "Max CPC",
                         ],
-                        ["Campaign A", "Ad group A", "Keyword A", "Exact", "1"],
+                        ["Keyword A"],
                     ]
                 ),
                 GoogleSheetValues(
@@ -219,55 +214,65 @@ class TestProcessData:
                         ["India", "Delhi", "Mumbai"],
                     ]
                 ),
-                200,
                 GoogleSheetValues(
                     values=[
                         [
-                            "Campaign",
-                            "Ad Group",
-                            "Keyword",
+                            "Campaign Name",
+                            "Ad Group Name",
                             "Criterion Type",
-                            "Max CPC",
+                            "Keyword",
                         ],
                         [
                             "India - Delhi - Mumbai",
                             "Delhi - Mumbai",
-                            "Keyword A",
                             "Exact",
-                            "1",
+                            "Keyword A",
                         ],
                         [
                             "India - Delhi - Mumbai",
                             "Mumbai - Delhi",
-                            "Keyword A",
                             "Exact",
-                            "1",
+                            "Keyword A",
                         ],
                     ],
                 ),
             ),
         ],
     )
-    def test_process_data(
+    @pytest.mark.asyncio()
+    async def test_process_data(
         self,
         template_sheet_values: GoogleSheetValues,
         new_campaign_sheet_values: GoogleSheetValues,
-        status_code: int,
         detail: Union[str, GoogleSheetValues],
     ) -> None:
-        response = client.post(
-            "/process-data?target_resource=keyword",
-            json={
-                "template_sheet_values": template_sheet_values.model_dump(),
-                "new_campaign_sheet_values": new_campaign_sheet_values.model_dump(),
-            },
+        merged_campaigns_ad_groups_df = pd.DataFrame(
+            {
+                "Campaign Name": [
+                    "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO"
+                ],
+                "Ad Group Name": ["INSERT_STATION_FROM - INSERT_STATION_TO"],
+                "Criterion Type": ["Exact"],
+            }
         )
-
-        assert response.status_code == status_code
         if isinstance(detail, GoogleSheetValues):
-            assert response.json() == detail.model_dump()
+            processed_data = await process_data(
+                template_sheet_values=template_sheet_values,
+                new_campaign_sheet_values=new_campaign_sheet_values,
+                merged_campaigns_ad_groups_df=merged_campaigns_ad_groups_df,
+                target_resource="keyword",
+            )
+            assert processed_data.model_dump() == detail.model_dump()
+
         else:
-            assert detail in response.json()["detail"]
+            with pytest.raises(HTTPException) as exc:
+                await process_data(
+                    template_sheet_values=template_sheet_values,
+                    new_campaign_sheet_values=new_campaign_sheet_values,
+                    merged_campaigns_ad_groups_df=merged_campaigns_ad_groups_df,
+                    target_resource="keyword",
+                )
+            assert detail in exc.value.detail
 
 
 class TestOpenAPIJSON:
@@ -284,7 +289,6 @@ class TestOpenAPIJSON:
             "/create-sheet",
             "/get-all-file-names",
             "/get-all-sheet-titles",
-            "/process-data",
             "/process-spreadsheet",
         ]
 

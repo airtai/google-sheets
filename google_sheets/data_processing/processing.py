@@ -24,15 +24,19 @@ Please provide the following columns: {mandatory_columns}
 
 INSERT_STATION_FROM = "INSERT_STATION_FROM"
 INSERT_STATION_TO = "INSERT_STATION_TO"
+INSERT_COUNTRY = "INSERT_COUNTRY"
+INSERT_CRITERION_TYPE = "INSERT_CRITERION_TYPE"
 
 
 def process_data_f(
-    template_df: pd.DataFrame, new_campaign_df: pd.DataFrame
+    merged_campaigns_ad_groups_df: pd.DataFrame,
+    template_df: pd.DataFrame,
+    new_campaign_df: pd.DataFrame,
 ) -> pd.DataFrame:
+    template_df = pd.merge(merged_campaigns_ad_groups_df, template_df, how="cross")
     final_df = pd.DataFrame(columns=template_df.columns)
     for _, template_row in template_df.iterrows():
         for _, new_campaign_row in new_campaign_df.iterrows():
-            campaign = f"{new_campaign_row['Country']} - {new_campaign_row['Station From']} - {new_campaign_row['Station To']}"
             stations = [
                 {
                     "Station From": new_campaign_row["Station From"],
@@ -46,12 +50,24 @@ def process_data_f(
             ]
             for station in stations:
                 new_row = template_row.copy()
-                new_row["Campaign"] = campaign
-                new_row["Ad Group"] = (
-                    f"{station['Station From']} - {station['Station To']}"
+                new_row["Campaign Name"] = new_row["Campaign Name"].replace(
+                    INSERT_COUNTRY, new_campaign_row["Country"]
+                )
+                new_row["Campaign Name"] = new_row["Campaign Name"].replace(
+                    INSERT_STATION_FROM, new_campaign_row["Station From"]
+                )
+                new_row["Campaign Name"] = new_row["Campaign Name"].replace(
+                    INSERT_STATION_TO, new_campaign_row["Station To"]
                 )
 
-                # Replace the placeholders in all columns with the actual station names INSERT_STATION_FROM
+                # Within "Ad Group Name" column replace INSERT_CRITERION_TYPE with the value from the new_row["Criterion Type"] column
+                new_row["Ad Group Name"] = new_row["Ad Group Name"].replace(
+                    INSERT_CRITERION_TYPE, new_row["Criterion Type"]
+                )
+
+                new_row = new_row.str.replace(
+                    INSERT_COUNTRY, new_campaign_row["Country"]
+                )
                 new_row = new_row.str.replace(
                     INSERT_STATION_FROM, station["Station From"]
                 )
