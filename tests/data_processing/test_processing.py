@@ -51,13 +51,20 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
 
 
 @pytest.mark.parametrize(
-    ("template_df", "new_campaign_df", "expected"),
+    ("merged_campaigns_ad_groups_df", "template_df", "new_campaign_df", "expected"),
     [
         (
             pd.DataFrame(
                 {
-                    "Campaign": ["", ""],
-                    "Ad Group": ["", ""],
+                    "Campaign Name": [
+                        "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO"
+                    ],
+                    "Ad Group Name": ["INSERT_STATION_FROM - INSERT_STATION_TO"],
+                    "Match Type": ["Exact"],
+                }
+            ),
+            pd.DataFrame(
+                {
                     "Keyword": ["k1", "k2"],
                     "Max CPC": ["", ""],
                 }
@@ -99,8 +106,15 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
         (
             pd.DataFrame(
                 {
-                    "Campaign": ["", ""],
-                    "Ad Group": ["", ""],
+                    "Campaign Name": [
+                        "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO"
+                    ],
+                    "Ad Group Name": ["INSERT_STATION_FROM - INSERT_STATION_TO"],
+                    "Match Type": ["Exact"],
+                }
+            ),
+            pd.DataFrame(
+                {
                     "Keyword": ["k1 INSERT_STATION_FROM", "k2"],
                     "Max CPC": ["", ""],
                 }
@@ -142,9 +156,14 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
     ],
 )
 def test_process_data_f(
-    template_df: pd.DataFrame, new_campaign_df: pd.DataFrame, expected: List[List[str]]
+    merged_campaigns_ad_groups_df: pd.DataFrame,
+    template_df: pd.DataFrame,
+    new_campaign_df: pd.DataFrame,
+    expected: List[List[str]],
 ) -> None:
-    process_data_f(template_df, new_campaign_df).equals(expected)
+    process_data_f(merged_campaigns_ad_groups_df, template_df, new_campaign_df).equals(
+        expected
+    )
 
 
 @pytest.mark.parametrize(
