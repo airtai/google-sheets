@@ -112,6 +112,8 @@ MAX_DESCRIPTIONS = 4
 MAX_HEADLINE_LENGTH = 30
 MAX_DESCRIPTION_LENGTH = 90
 
+MAX_PATH_LENGTH = 15
+
 
 def _validate_output_data_ad(df: pd.DataFrame) -> pd.DataFrame:  # noqa: C901
     df["Issues"] = ""
@@ -165,9 +167,14 @@ def _validate_output_data_ad(df: pd.DataFrame) -> pd.DataFrame:  # noqa: C901
                     f"Description length should be less than {MAX_DESCRIPTION_LENGTH} characters, found {len(description)} in column {description_column}.\n"
                 )
 
-        # TODO: Check for the final URL
-        # if not row["Final URL"]:
-        #     df.loc[index, "Issues"] += "Final URL is missing.\n"
+        for path in ["Path 1", "Path 2"]:
+            if row[path] and len(row[path]) > MAX_PATH_LENGTH:
+                df.loc[index, "Issues"] += (
+                    f"{path} length should be less than {MAX_PATH_LENGTH} characters, found {len(row[path])}.\n"
+                )
+
+        if not row["Final URL"]:
+            df.loc[index, "Issues"] += "Final URL is missing.\n"
 
     if not df["Issues"].any():
         df = df.drop(columns=["Issues"])
