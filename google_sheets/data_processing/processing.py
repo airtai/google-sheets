@@ -79,10 +79,23 @@ def process_data_f(
 
                 if target_resource == "ad":
                     new_row["Final URL"] = station["Final Url"]
+                elif (
+                    target_resource == "keyword"
+                    and new_row["Negative"]
+                    and new_row["Negative"].lower() == "true"
+                ):
+                    new_row["Match Type"] = new_row["Keyword Match Type"]
+
+                    if new_row["Level"] == "Campaign":
+                        new_row["Ad Group Name"] = None
 
                 final_df = pd.concat(
                     [final_df, pd.DataFrame([new_row])], ignore_index=True
                 )
+
+    if target_resource == "keyword":
+        final_df = final_df.drop(columns=["Keyword Match Type"])
+    final_df = final_df.drop_duplicates(ignore_index=True)
 
     final_df = final_df.sort_values(
         by=["Campaign Name", "Ad Group Name"], ignore_index=True
