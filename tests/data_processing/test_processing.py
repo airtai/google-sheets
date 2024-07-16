@@ -186,6 +186,9 @@ def test_validate_output_data(issues_column: Optional[List[str]]) -> None:
             "Headline 3": ["H3", "H3", "H3", ""],
             "Description 1": ["D1", "D1", "D2", "D3"],
             "Description 2": ["D1", "D1", "D3", ""],
+            "Path 1": ["P1", "P1", "P1", "P1"],
+            "Path 2": ["P2", "P2", "P2", "P2"],
+            "Final URL": ["URL", "URL", "URL", "URL"],
         }
     )
     result = validate_output_data(df, "ad")

@@ -228,8 +228,12 @@ class TestProcessData:
                     values=[
                         [
                             "Keyword",
+                            "Keyword Match Type",
+                            "Level",
+                            "Negative",
                         ],
-                        ["Keyword A"],
+                        ["Keyword A", "Exact", None, "False"],
+                        ["Keyword N", "Broad", "Campaign", "True"],
                     ]
                 ),
                 GoogleSheetValues(
@@ -257,18 +261,32 @@ class TestProcessData:
                             "Ad Group Name",
                             "Match Type",
                             "Keyword",
+                            "Level",
+                            "Negative",
                         ],
                         [
                             "India - Delhi - Mumbai",
                             "Delhi - Mumbai",
                             "Exact",
                             "Keyword A",
+                            None,
+                            "False",
                         ],
                         [
                             "India - Delhi - Mumbai",
                             "Mumbai - Delhi",
                             "Exact",
                             "Keyword A",
+                            None,
+                            "False",
+                        ],
+                        [
+                            "India - Delhi - Mumbai",
+                            None,
+                            "Broad",
+                            "Keyword N",
+                            "Campaign",
+                            "True",
                         ],
                     ],
                 ),

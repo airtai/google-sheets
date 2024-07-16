@@ -314,6 +314,9 @@ MANDATORY_AD_TEMPLATE_COLUMNS = [
 
 MANDATORY_KEYWORD_TEMPLATE_COLUMNS = [
     "Keyword",
+    "Keyword Match Type",
+    "Level",
+    "Negative",
 ]
 
 
