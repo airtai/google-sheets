@@ -1,4 +1,4 @@
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 import pandas as pd
 
@@ -24,15 +24,20 @@ Please provide the following columns: {mandatory_columns}
 
 INSERT_STATION_FROM = "INSERT_STATION_FROM"
 INSERT_STATION_TO = "INSERT_STATION_TO"
+INSERT_COUNTRY = "INSERT_COUNTRY"
+INSERT_CRITERION_TYPE = "INSERT_CRITERION_TYPE"
 
 
 def process_data_f(
-    template_df: pd.DataFrame, new_campaign_df: pd.DataFrame
+    merged_campaigns_ad_groups_df: pd.DataFrame,
+    template_df: pd.DataFrame,
+    new_campaign_df: pd.DataFrame,
+    target_resource: Optional[str] = None,
 ) -> pd.DataFrame:
+    template_df = pd.merge(merged_campaigns_ad_groups_df, template_df, how="cross")
     final_df = pd.DataFrame(columns=template_df.columns)
     for _, template_row in template_df.iterrows():
         for _, new_campaign_row in new_campaign_df.iterrows():
-            campaign = f"{new_campaign_row['Country']} - {new_campaign_row['Station From']} - {new_campaign_row['Station To']}"
             stations = [
                 {
                     "Station From": new_campaign_row["Station From"],
@@ -44,22 +49,57 @@ def process_data_f(
                     "Station To": new_campaign_row["Station From"],
                 },
             ]
+            if target_resource == "ad":
+                stations[0]["Final Url"] = new_campaign_row["Final Url From"]
+                stations[1]["Final Url"] = new_campaign_row["Final Url To"]
+
             for station in stations:
                 new_row = template_row.copy()
-                new_row["Campaign"] = campaign
-                new_row["Ad Group"] = (
-                    f"{station['Station From']} - {station['Station To']}"
+                new_row["Campaign Name"] = new_row["Campaign Name"].replace(
+                    INSERT_COUNTRY, new_campaign_row["Country"]
+                )
+                new_row["Campaign Name"] = new_row["Campaign Name"].replace(
+                    INSERT_STATION_FROM, new_campaign_row["Station From"]
+                )
+                new_row["Campaign Name"] = new_row["Campaign Name"].replace(
+                    INSERT_STATION_TO, new_campaign_row["Station To"]
                 )
 
-                # Replace the placeholders in all columns with the actual station names INSERT_STATION_FROM
+                new_row["Ad Group Name"] = new_row["Ad Group Name"].replace(
+                    INSERT_CRITERION_TYPE, new_row["Match Type"]
+                )
+
+                new_row = new_row.str.replace(
+                    INSERT_COUNTRY, new_campaign_row["Country"]
+                )
                 new_row = new_row.str.replace(
                     INSERT_STATION_FROM, station["Station From"]
                 )
                 new_row = new_row.str.replace(INSERT_STATION_TO, station["Station To"])
 
+                if target_resource == "ad":
+                    new_row["Final URL"] = station["Final Url"]
+                elif (
+                    target_resource == "keyword"
+                    and new_row["Negative"]
+                    and new_row["Negative"].lower() == "true"
+                ):
+                    new_row["Match Type"] = new_row["Keyword Match Type"]
+
+                    if new_row["Level"] == "Campaign":
+                        new_row["Ad Group Name"] = None
+
                 final_df = pd.concat(
                     [final_df, pd.DataFrame([new_row])], ignore_index=True
                 )
+
+    if target_resource == "keyword":
+        final_df = final_df.drop(columns=["Keyword Match Type"])
+    final_df = final_df.drop_duplicates(ignore_index=True)
+
+    final_df = final_df.sort_values(
+        by=["Campaign Name", "Ad Group Name"], ignore_index=True
+    )
 
     return final_df
 
@@ -71,6 +111,8 @@ MAX_DESCRIPTIONS = 4
 
 MAX_HEADLINE_LENGTH = 30
 MAX_DESCRIPTION_LENGTH = 90
+
+MAX_PATH_LENGTH = 15
 
 
 def _validate_output_data_ad(df: pd.DataFrame) -> pd.DataFrame:  # noqa: C901
@@ -125,9 +167,14 @@ def _validate_output_data_ad(df: pd.DataFrame) -> pd.DataFrame:  # noqa: C901
                     f"Description length should be less than {MAX_DESCRIPTION_LENGTH} characters, found {len(description)} in column {description_column}.\n"
                 )
 
-        # TODO: Check for the final URL
-        # if not row["Final URL"]:
-        #     df.loc[index, "Issues"] += "Final URL is missing.\n"
+        for path in ["Path 1", "Path 2"]:
+            if row[path] and len(row[path]) > MAX_PATH_LENGTH:
+                df.loc[index, "Issues"] += (
+                    f"{path} length should be less than {MAX_PATH_LENGTH} characters, found {len(row[path])}.\n"
+                )
+
+        if not row["Final URL"]:
+            df.loc[index, "Issues"] += "Final URL is missing.\n"
 
     if not df["Issues"].any():
         df = df.drop(columns=["Issues"])

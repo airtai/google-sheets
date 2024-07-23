@@ -48,9 +48,7 @@ async def is_authenticated_for_ads(user_id: int) -> bool:
     async with get_db_connection() as db:
         data = await db.gauth.find_unique(where={"user_id": user_id})
 
-    if not data:
-        return False
-    return True
+    return bool(data)
 
 
 # Route 1: Redirect to Google OAuth
@@ -299,24 +297,26 @@ async def get_all_sheet_titles(
     return sheets
 
 
-NEW_CAMPAIGN_MANDATORY_COLUMNS = ["Country", "Station From", "Station To"]
+NEW_CAMPAIGN_MANDATORY_COLUMNS = [
+    "Country",
+    "Station From",
+    "Station To",
+    "Final Url From",
+    "Final Url To",
+]
 MANDATORY_AD_TEMPLATE_COLUMNS = [
-    "Campaign",
-    "Ad Group",
     "Headline 1",
     "Headline 2",
     "Headline 3",
     "Description Line 1",
     "Description Line 2",
-    "Final Url",
 ]
 
 MANDATORY_KEYWORD_TEMPLATE_COLUMNS = [
-    "Campaign",
-    "Ad Group",
     "Keyword",
-    "Criterion Type",
-    "Max CPC",
+    "Keyword Match Type",
+    "Level",
+    "Negative",
 ]
 
 
@@ -328,40 +328,12 @@ def _validate_target_resource(target_resource: Optional[str]) -> None:
         )
 
 
-@app.post(
-    "/process-data",
-    description="Process data to generate new ads or keywords based on the template",
-)
 async def process_data(
-    template_sheet_values: Annotated[
-        Optional[GoogleSheetValues],
-        Body(
-            embed=True,
-            description="Template values to be used for generating new ads or keywords",
-        ),
-    ] = None,
-    new_campaign_sheet_values: Annotated[
-        Optional[GoogleSheetValues],
-        Body(
-            embed=True,
-            description="New campaign values to be used for generating new ads or keywords",
-        ),
-    ] = None,
-    target_resource: Annotated[
-        Optional[str],
-        Query(
-            description="The target resource to be updated. This can be 'ad' or 'keyword'"
-        ),
-    ] = None,
+    template_sheet_values: GoogleSheetValues,
+    new_campaign_sheet_values: GoogleSheetValues,
+    merged_campaigns_ad_groups_df: pd.DataFrame,
+    target_resource: str,
 ) -> GoogleSheetValues:
-    _check_parameters_are_not_none(
-        {
-            "template_sheet_values": template_sheet_values,
-            "new_campaign_sheet_values": new_campaign_sheet_values,
-            "target_resource": target_resource,
-        }
-    )
-    _validate_target_resource(target_resource)
     if (
         len(template_sheet_values.values) < 2  # type: ignore
         or len(new_campaign_sheet_values.values) < 2  # type: ignore
@@ -408,7 +380,12 @@ async def process_data(
             status_code=status.HTTP_400_BAD_REQUEST, detail=validation_error_msg
         )
 
-    processed_df = process_data_f(template_df, new_campaign_df)
+    processed_df = process_data_f(
+        merged_campaigns_ad_groups_df,
+        template_df,
+        new_campaign_df,
+        target_resource=target_resource,
+    )
 
     validated_df = validate_output_data(
         processed_df,
@@ -418,6 +395,43 @@ async def process_data(
     values = [validated_df.columns.tolist(), *validated_df.values.tolist()]
 
     return GoogleSheetValues(values=values)
+
+
+async def process_campaigns_and_ad_groups(
+    campaign_template_values: GoogleSheetValues,
+    ad_group_template_values: GoogleSheetValues,
+) -> pd.DataFrame:
+    _check_parameters_are_not_none(
+        {
+            "campaign_template_values": campaign_template_values,
+            "ad_group_template_values": ad_group_template_values,
+        }
+    )
+    if (
+        len(campaign_template_values.values) < 2  # type: ignore
+        or len(ad_group_template_values.values) < 2  # type: ignore
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Both template campaigns and ad groups data should have at least two rows (header and data).",
+        )
+
+    try:
+        campaign_template_df = pd.DataFrame(
+            campaign_template_values.values[1:],  # type: ignore
+            columns=campaign_template_values.values[0],  # type: ignore
+        )
+        ad_group_template_df = pd.DataFrame(
+            ad_group_template_values.values[1:],  # type: ignore
+            columns=ad_group_template_values.values[0],  # type: ignore
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid data format. Please provide data in the correct format: {e}",
+        ) from e
+
+    return pd.merge(campaign_template_df, ad_group_template_df, how="cross")
 
 
 @app.post(
@@ -432,10 +446,6 @@ async def process_spreadsheet(
         Optional[str],
         Query(description="ID of the Google Sheet with the template data"),
     ] = None,
-    template_sheet_title: Annotated[
-        Optional[str],
-        Query(description="The title of the sheet with the template data"),
-    ] = None,
     new_campaign_spreadsheet_id: Annotated[
         Optional[str],
         Query(description="ID of the Google Sheet with the new campaign data"),
@@ -444,66 +454,95 @@ async def process_spreadsheet(
         Optional[str],
         Query(description="The title of the sheet with the new campaign data"),
     ] = None,
-    target_resource: Annotated[
-        Optional[str],
-        Query(
-            description="The target resource to be updated, options: 'ad' or 'keyword'"
-        ),
-    ] = None,
 ) -> str:
     _check_parameters_are_not_none(
         {
             "template_spreadsheet_id": template_spreadsheet_id,
-            "template_sheet_title": template_sheet_title,
             "new_campaign_spreadsheet_id": new_campaign_spreadsheet_id,
             "new_campaign_sheet_title": new_campaign_sheet_title,
-            "target_resource": target_resource,
         }
-    )
-    _validate_target_resource(target_resource)
-    template_values = await get_sheet(
-        user_id=user_id,
-        spreadsheet_id=template_spreadsheet_id,
-        title=template_sheet_title,
     )
     new_campaign_values = await get_sheet(
         user_id=user_id,
         spreadsheet_id=new_campaign_spreadsheet_id,
         title=new_campaign_sheet_title,
     )
+    try:
+        ads_template_values = await get_sheet(
+            user_id=user_id,
+            spreadsheet_id=template_spreadsheet_id,
+            title="Ads",
+        )
+        keywords_template_values = await get_sheet(
+            user_id=user_id,
+            spreadsheet_id=template_spreadsheet_id,
+            title="Keywords",
+        )
+        campaign_template_values = await get_sheet(
+            user_id=user_id, spreadsheet_id=template_spreadsheet_id, title="Campaigns"
+        )
+        ad_group_template_values = await get_sheet(
+            user_id=user_id, spreadsheet_id=template_spreadsheet_id, title="Ad Groups"
+        )
+        if not isinstance(
+            campaign_template_values, GoogleSheetValues
+        ) or not isinstance(ad_group_template_values, GoogleSheetValues):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"""Please provide Campaigns, Ad Groups, Ads and KEywords tables in the template spreadsheet with id '{template_spreadsheet_id}'""",
+            )
 
-    if not isinstance(template_values, GoogleSheetValues) or not isinstance(
-        new_campaign_values, GoogleSheetValues
+        merged_campaigns_ad_groups_df = await process_campaigns_and_ad_groups(
+            campaign_template_values=campaign_template_values,
+            ad_group_template_values=ad_group_template_values,
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"""Make sure tables 'Campaigns', 'Ad Groups', 'Ads' and 'Keywords' are present in the template spreadsheet with id '{template_spreadsheet_id}'.""",
+        ) from e
+
+    if (
+        not isinstance(ads_template_values, GoogleSheetValues)
+        or not isinstance(keywords_template_values, GoogleSheetValues)
+        or not isinstance(new_campaign_values, GoogleSheetValues)
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"""Invalid data format.
-template_values: {template_values}
+ads_template_values: {ads_template_values}
+
+keywords_template_values: {keywords_template_values}
 
 new_campaign_values: {new_campaign_values}
 
 Please provide data in the correct format.""",
         )
 
-    processed_values = await process_data(
-        template_sheet_values=template_values,
-        new_campaign_sheet_values=new_campaign_values,
-        target_resource=target_resource,
-    )
+    response = ""
+    for template_values, target_resource in zip(
+        [ads_template_values, keywords_template_values], ["ad", "keyword"]
+    ):
+        processed_values = await process_data(
+            template_sheet_values=template_values,
+            new_campaign_sheet_values=new_campaign_values,
+            merged_campaigns_ad_groups_df=merged_campaigns_ad_groups_df,
+            target_resource=target_resource,
+        )
 
-    title = (
-        f"Captn - {target_resource.capitalize()}s {datetime.now():%Y-%m-%d %H:%M:%S}"  # type: ignore
-    )
-    await create_sheet(
-        user_id=user_id,
-        spreadsheet_id=new_campaign_spreadsheet_id,
-        title=title,
-    )
-    await update_sheet(
-        user_id=user_id,
-        spreadsheet_id=new_campaign_spreadsheet_id,
-        title=title,
-        sheet_values=processed_values,
-    )
+        title = f"Captn - {target_resource.capitalize()}s {datetime.now():%Y-%m-%d %H:%M:%S}"  # type: ignore
+        await create_sheet(
+            user_id=user_id,
+            spreadsheet_id=new_campaign_spreadsheet_id,
+            title=title,
+        )
+        await update_sheet(
+            user_id=user_id,
+            spreadsheet_id=new_campaign_spreadsheet_id,
+            title=title,
+            sheet_values=processed_values,
+        )
+        response += f"Sheet with the name '{title}' has been created successfully.\n"
 
-    return f"Sheet with the name 'Captn - {target_resource.capitalize()}s' has been created successfully."  # type: ignore
+    return response
