@@ -167,33 +167,53 @@ def test_process_data_f(
 
 
 @pytest.mark.parametrize(
-    "issues_column",
+    ("df", "issues_column"),
     [
-        [
-            "Duplicate headlines found.\nDuplicate descriptions found.\n",
-            "Duplicate descriptions found.\n",
-            "",
-            "Minimum 3 headlines are required, found 2.\nMinimum 2 descriptions are required, found 1.\nHeadline length should be less than 30 characters, found 31 in column Headline 2.\n",
-        ],
-        None,
+        (
+            pd.DataFrame(
+                {
+                    "Headline 1": ["H1", "H1", "H1", "H1"],
+                    "Headline 2": ["H1", "H2", "H2", ("H" * 31)],
+                    "Headline 3": ["H3", "H3", "H3", ""],
+                    "Description 1": ["D1", "D1", "D2", "D3"],
+                    "Description 2": ["D1", "D1", "D3", ""],
+                    "Path 1": ["P1", "P1", "P1", "P1"],
+                    "Path 2": ["P2", "P2", "P2", "P2"],
+                    "Final URL": ["URL", "URL", "URL", "URL"],
+                }
+            ),
+            [
+                "Duplicate headlines found.\nDuplicate descriptions found.\n",
+                "Duplicate descriptions found.\n",
+                "",
+                "Minimum 3 headlines are required, found 2.\nMinimum 2 descriptions are required, found 1.\nHeadline length should be less than 30 characters, found 31 in column Headline 2.\n",
+            ],
+        ),
+        (
+            pd.DataFrame(
+                {
+                    "Headline 1": ["H1", "H1", "H1", "H1"],
+                    "Headline 2": ["H2", "H2", "H2", "H2"],
+                    "Headline 3": ["H3", "H3", "H3", "H3"],
+                    "Description 1": ["D1", "D1", "D1", "D1"],
+                    "Description 2": ["D2", "D2", "D2", "D2"],
+                    "Path 1": ["P1", "P1", "P1", "P1"],
+                    "Path 2": ["P2", "P2", "P2", "P2"],
+                    "Final URL": ["URL", "URL", "URL", "URL"],
+                }
+            ),
+            None,
+        ),
     ],
 )
-def test_validate_output_data(issues_column: Optional[List[str]]) -> None:
-    df = pd.DataFrame(
-        {
-            "Headline 1": ["H1", "H1", "H1", "H1"],
-            "Headline 2": ["H1", "H2", "H2", ("H" * 31)],
-            "Headline 3": ["H3", "H3", "H3", ""],
-            "Description 1": ["D1", "D1", "D2", "D3"],
-            "Description 2": ["D1", "D1", "D3", ""],
-            "Path 1": ["P1", "P1", "P1", "P1"],
-            "Path 2": ["P2", "P2", "P2", "P2"],
-            "Final URL": ["URL", "URL", "URL", "URL"],
-        }
-    )
-    result = validate_output_data(df, "ad")
+def test_validate_output_data(
+    df: pd.DataFrame, issues_column: Optional[List[str]]
+) -> None:
     expected = df.copy()
+    result = validate_output_data(df, "ad")
+
     if issues_column:
+        expected.insert(0, "Issues", "")
         expected["Issues"] = issues_column
 
     assert result.equals(expected)

@@ -116,7 +116,8 @@ MAX_PATH_LENGTH = 15
 
 
 def _validate_output_data_ad(df: pd.DataFrame) -> pd.DataFrame:  # noqa: C901
-    df["Issues"] = ""
+    df.insert(0, "Issues", "")
+
     headline_columns = [col for col in df.columns if "Headline" in col]
     description_columns = [col for col in df.columns if "Description" in col]
 
