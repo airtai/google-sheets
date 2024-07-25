@@ -392,9 +392,10 @@ async def process_data(
         target_resource,  # type: ignore
     )
 
+    issues_present = "Issues" in validated_df.columns
     values = [validated_df.columns.tolist(), *validated_df.values.tolist()]
 
-    return GoogleSheetValues(values=values)
+    return GoogleSheetValues(values=values, issues_present=issues_present)
 
 
 async def process_campaigns_and_ad_groups(
@@ -544,5 +545,8 @@ Please provide data in the correct format.""",
             sheet_values=processed_values,
         )
         response += f"Sheet with the name '{title}' has been created successfully.\n"
+        if processed_values.issues_present:
+            response += """But there are issues present in the data.
+Please check the 'Issues' column and correct the data accordingly.\n\n"""
 
     return response

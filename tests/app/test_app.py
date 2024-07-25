@@ -294,7 +294,7 @@ class TestProcessData:
         ],
     )
     @pytest.mark.asyncio()
-    async def test_process_data(
+    async def test_process_data_keywords(
         self,
         template_sheet_values: GoogleSheetValues,
         new_campaign_sheet_values: GoogleSheetValues,
@@ -327,6 +327,116 @@ class TestProcessData:
                     target_resource="keyword",
                 )
             assert detail in exc.value.detail
+
+    @pytest.mark.asyncio()
+    async def test_process_data_ads(self) -> None:
+        template_sheet_values = GoogleSheetValues(
+            values=[
+                [
+                    "Final URL",
+                    "Headline 1",
+                    "Headline 2",
+                    "Headline 3",
+                    "Description Line 1",
+                    "Description Line 2",
+                    "Path 1",
+                    "Path 2",
+                ],
+                [
+                    "https://www.example.com/from",
+                    "H" * 31,
+                    "Headline 2",
+                    "Headline 3",
+                    "Description Line 1",
+                    "Description Line 2",
+                    "Path 1",
+                    "Path 2",
+                ],
+            ]
+        )
+        new_campaign_sheet_values = GoogleSheetValues(
+            values=[
+                [
+                    "Country",
+                    "Station From",
+                    "Station To",
+                    "Final Url From",
+                    "Final Url To",
+                ],
+                [
+                    "India",
+                    "Delhi",
+                    "Mumbai",
+                    "https://www.example.com/from",
+                    "https://www.example.com/to",
+                ],
+            ]
+        )
+        merged_campaigns_ad_groups_df = pd.DataFrame(
+            {
+                "Campaign Name": [
+                    "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO"
+                ],
+                "Ad Group Name": ["INSERT_STATION_FROM - INSERT_STATION_TO"],
+                "Match Type": ["Exact"],
+            }
+        )
+        result = await process_data(
+            template_sheet_values=template_sheet_values,
+            new_campaign_sheet_values=new_campaign_sheet_values,
+            merged_campaigns_ad_groups_df=merged_campaigns_ad_groups_df,
+            target_resource="ad",
+        )
+
+        expected = GoogleSheetValues(
+            values=[
+                [
+                    "Issues",
+                    "Campaign Name",
+                    "Ad Group Name",
+                    "Match Type",
+                    "Final URL",
+                    "Headline 1",
+                    "Headline 2",
+                    "Headline 3",
+                    "Description Line 1",
+                    "Description Line 2",
+                    "Path 1",
+                    "Path 2",
+                ],
+                [
+                    "Headline length should be less than 30 characters, found 31 in column Headline 1.\n",
+                    "India - Delhi - Mumbai",
+                    "Delhi - Mumbai",
+                    "Exact",
+                    "https://www.example.com/from",
+                    "HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH",
+                    "Headline 2",
+                    "Headline 3",
+                    "Description Line 1",
+                    "Description Line 2",
+                    "Path 1",
+                    "Path 2",
+                ],
+                [
+                    "Headline length should be less than 30 characters, found 31 in column Headline 1.\n",
+                    "India - Delhi - Mumbai",
+                    "Mumbai - Delhi",
+                    "Exact",
+                    "https://www.example.com/to",
+                    "HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH",
+                    "Headline 2",
+                    "Headline 3",
+                    "Description Line 1",
+                    "Description Line 2",
+                    "Path 1",
+                    "Path 2",
+                ],
+            ],
+            issues_present=True,
+        )
+
+        assert result.model_dump() == expected.model_dump()
 
 
 class TestOpenAPIJSON:
