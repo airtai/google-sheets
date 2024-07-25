@@ -8,6 +8,7 @@ import httpx
 import pandas as pd
 from fastapi import Body, FastAPI, HTTPException, Query, Response, status
 from fastapi.responses import RedirectResponse
+from google.auth.exceptions import RefreshError
 from googleapiclient.errors import HttpError
 
 from . import __version__
@@ -263,7 +264,17 @@ async def get_all_file_names(
     ],
 ) -> Dict[str, str]:
     service = await build_service(user_id=user_id, service_name="drive", version="v3")
-    files: List[Dict[str, str]] = await get_files_f(service=service)
+    try:
+        files: List[Dict[str, str]] = await get_files_f(service=service)
+    except RefreshError as e:
+        error_msg = "The user's credentials have expired. Please log in again with 'force_new_login' parameter set to 'True'.\n"
+        error_msg += f"Error: {e!s}"
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=error_msg
+        ) from e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR) from e
     # create dict where key is id and value is name
     files_dict = {file["id"]: file["name"] for file in files}
     return files_dict
