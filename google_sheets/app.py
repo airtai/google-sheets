@@ -70,7 +70,7 @@ async def get_login_url(
             return {"login_url": "User is already authenticated"}
 
     google_oauth_url = get_google_oauth_url(user_id, conv_uuid)  # type: ignore
-    markdown_url = f"To navigate Google Ads waters, I require access to your account. Please [click here]({google_oauth_url}) to grant permission."
+    markdown_url = f"To navigate Google Sheets waters, I require access to your account. Please [click here]({google_oauth_url}) to grant permission."
     return {"login_url": markdown_url}
 
 
