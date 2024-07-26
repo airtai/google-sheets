@@ -8,6 +8,7 @@ import httpx
 import pandas as pd
 from fastapi import Body, FastAPI, HTTPException, Query, Response, status
 from fastapi.responses import RedirectResponse
+from google.auth.exceptions import RefreshError
 from googleapiclient.errors import HttpError
 
 from . import __version__
@@ -69,7 +70,7 @@ async def get_login_url(
             return {"login_url": "User is already authenticated"}
 
     google_oauth_url = get_google_oauth_url(user_id, conv_uuid)  # type: ignore
-    markdown_url = f"To navigate Google Ads waters, I require access to your account. Please [click here]({google_oauth_url}) to grant permission."
+    markdown_url = f"To navigate Google Sheets waters, I require access to your account. Please [click here]({google_oauth_url}) to grant permission."
     return {"login_url": markdown_url}
 
 
@@ -263,7 +264,17 @@ async def get_all_file_names(
     ],
 ) -> Dict[str, str]:
     service = await build_service(user_id=user_id, service_name="drive", version="v3")
-    files: List[Dict[str, str]] = await get_files_f(service=service)
+    try:
+        files: List[Dict[str, str]] = await get_files_f(service=service)
+    except RefreshError as e:
+        error_msg = "The user's credentials have expired. Please log in again with 'force_new_login' parameter set to 'True'.\n"
+        error_msg += f"Error: {e!s}"
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=error_msg
+        ) from e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR) from e
     # create dict where key is id and value is name
     files_dict = {file["id"]: file["name"] for file in files}
     return files_dict
@@ -392,9 +403,10 @@ async def process_data(
         target_resource,  # type: ignore
     )
 
+    issues_present = "Issues" in validated_df.columns
     values = [validated_df.columns.tolist(), *validated_df.values.tolist()]
 
-    return GoogleSheetValues(values=values)
+    return GoogleSheetValues(values=values, issues_present=issues_present)
 
 
 async def process_campaigns_and_ad_groups(
@@ -544,5 +556,8 @@ Please provide data in the correct format.""",
             sheet_values=processed_values,
         )
         response += f"Sheet with the name '{title}' has been created successfully.\n"
+        if processed_values.issues_present:
+            response += """But there are issues present in the data.
+Please check the 'Issues' column and correct the data accordingly.\n\n"""
 
     return response
