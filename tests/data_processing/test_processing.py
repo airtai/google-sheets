@@ -4,6 +4,8 @@ import pandas as pd
 import pytest
 
 from google_sheets.data_processing.processing import (
+    _update_campaign_name,
+    process_campaign_data_f,
     process_data_f,
     validate_input_data,
     validate_output_data,
@@ -167,6 +169,52 @@ def test_process_data_f(
 
 
 @pytest.mark.parametrize(
+    ("campaigns_template_df", "new_campaign_df", "expected"),
+    [
+        (
+            pd.DataFrame(
+                {
+                    "Campaign Name": [
+                        "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO"
+                    ],
+                    "Campaign Budget": ["100"],
+                    "Search Network": [True],
+                    "Google Search Network": [False],
+                    "Default max. CPC": [0.3],
+                }
+            ),
+            pd.DataFrame(
+                {
+                    "Country": ["USA", "USA"],
+                    "Station From": ["A", "B"],
+                    "Station To": ["C", "D"],
+                }
+            ),
+            pd.DataFrame(
+                {
+                    "Campaign Name": [
+                        "USA - A - C",
+                        "USA - B - D",
+                    ],
+                    "Campaign Budget": ["100", "100"],
+                    "Search Network": [True, True],
+                    "Google Search Network": [False, False],
+                    "Default max. CPC": [0.3, 0.3],
+                },
+            ),
+        ),
+    ],
+)
+def test_process_campaign_data_f(
+    campaigns_template_df: pd.DataFrame,
+    new_campaign_df: pd.DataFrame,
+    expected: pd.DataFrame,
+) -> None:
+    processed_data = process_campaign_data_f(campaigns_template_df, new_campaign_df)
+    assert processed_data.equals(expected)
+
+
+@pytest.mark.parametrize(
     ("df", "issues_column"),
     [
         (
@@ -217,3 +265,25 @@ def test_validate_output_data(
         expected["Issues"] = issues_column
 
     assert result.equals(expected)
+
+
+@pytest.mark.parametrize(
+    ("new_camaign_row", "campaign_name", "expected"),
+    [
+        (
+            pd.Series(
+                {
+                    "Country": "USA",
+                    "Station From": "A",
+                    "Station To": "B",
+                }
+            ),
+            "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO",
+            "USA - A - B",
+        ),
+    ],
+)
+def test_update_campaign_name(
+    new_camaign_row: pd.Series, campaign_name: str, expected: str
+) -> None:
+    assert _update_campaign_name(new_camaign_row, campaign_name) == expected

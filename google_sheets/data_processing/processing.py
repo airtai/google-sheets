@@ -28,6 +28,44 @@ INSERT_COUNTRY = "INSERT_COUNTRY"
 INSERT_CRITERION_TYPE = "INSERT_CRITERION_TYPE"
 
 
+def _update_campaign_name(new_campaign_row: pd.Series, campaign_name: str) -> str:
+    campaign_name = campaign_name.replace(INSERT_COUNTRY, new_campaign_row["Country"])
+    campaign_name = campaign_name.replace(
+        INSERT_STATION_FROM, new_campaign_row["Station From"]
+    )
+    campaign_name = campaign_name.replace(
+        INSERT_STATION_TO, new_campaign_row["Station To"]
+    )
+    return campaign_name
+
+
+def process_campaign_data_f(
+    campaigns_template_df: pd.DataFrame, new_campaign_df: pd.DataFrame
+) -> pd.DataFrame:
+    final_df = None
+    for _, new_campaign_row in new_campaign_df.iterrows():
+        for _, template_row in campaigns_template_df.iterrows():
+            new_row = template_row.copy()
+            new_row["Campaign Name"] = _update_campaign_name(
+                new_campaign_row, campaign_name=new_row["Campaign Name"]
+            )
+            if final_df is None:
+                final_df = pd.DataFrame([new_row], columns=template_row.index)
+            else:
+                final_df = pd.concat(
+                    [final_df, pd.DataFrame([new_row], columns=template_row.index)],
+                    ignore_index=True,
+                )
+
+            final_df["Search Network"] = final_df["Search Network"].astype(bool)
+            final_df["Google Search Network"] = final_df[
+                "Google Search Network"
+            ].astype(bool)
+            final_df["Default max. CPC"] = final_df["Default max. CPC"].astype(float)
+
+    return final_df
+
+
 def process_data_f(
     merged_campaigns_ad_groups_df: pd.DataFrame,
     template_df: pd.DataFrame,
