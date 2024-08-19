@@ -27,19 +27,17 @@ Please provide the following columns: {mandatory_columns}
     return ""
 
 
-INSERT_STATION_FROM = "INSERT_STATION_FROM"
-INSERT_STATION_TO = "INSERT_STATION_TO"
-INSERT_COUNTRY = "INSERT_COUNTRY"
-INSERT_CRITERION_TYPE = "INSERT_CRITERION_TYPE"
+INSERT_STATION_FROM = "{INSERT_STATION_FROM}"
+INSERT_STATION_TO = "{INSERT_STATION_TO}"
+INSERT_COUNTRY = "{INSERT_COUNTRY}"
+INSERT_CRITERION_TYPE = "{INSERT_CRITERION_TYPE}"
 
 
 def _update_campaign_name(new_campaign_row: pd.Series, campaign_name: str) -> str:
-    campaign_name = campaign_name.replace(INSERT_COUNTRY, new_campaign_row["Country"])
-    campaign_name = campaign_name.replace(
-        INSERT_STATION_FROM, new_campaign_row["Station From"]
-    )
-    campaign_name = campaign_name.replace(
-        INSERT_STATION_TO, new_campaign_row["Station To"]
+    campaign_name = campaign_name.format(
+        INSERT_COUNTRY=new_campaign_row["Country"],
+        INSERT_STATION_FROM=new_campaign_row["Station From"],
+        INSERT_STATION_TO=new_campaign_row["Station To"],
     )
     return campaign_name
 
@@ -98,18 +96,8 @@ def process_data_f(
 
             for station in stations:
                 new_row = template_row.copy()
-                new_row["Campaign Name"] = new_row["Campaign Name"].replace(
-                    INSERT_COUNTRY, new_campaign_row["Country"]
-                )
-                new_row["Campaign Name"] = new_row["Campaign Name"].replace(
-                    INSERT_STATION_FROM, new_campaign_row["Station From"]
-                )
-                new_row["Campaign Name"] = new_row["Campaign Name"].replace(
-                    INSERT_STATION_TO, new_campaign_row["Station To"]
-                )
-
-                new_row["Ad Group Name"] = new_row["Ad Group Name"].replace(
-                    INSERT_CRITERION_TYPE, new_row["Match Type"]
+                new_row["Campaign Name"] = _update_campaign_name(
+                    new_campaign_row, campaign_name=new_row["Campaign Name"]
                 )
 
                 new_row = new_row.str.replace(
@@ -119,6 +107,9 @@ def process_data_f(
                     INSERT_STATION_FROM, station["Station From"]
                 )
                 new_row = new_row.str.replace(INSERT_STATION_TO, station["Station To"])
+                new_row = new_row.str.replace(
+                    INSERT_CRITERION_TYPE, new_row["Match Type"]
+                )
 
                 if target_resource == "ad":
                     new_row["Final URL"] = station["Final Url"]

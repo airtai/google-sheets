@@ -175,7 +175,7 @@ def test_process_data_f(
             pd.DataFrame(
                 {
                     "Campaign Name": [
-                        "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO"
+                        "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO}"
                     ],
                     "Campaign Budget": ["100"],
                     "Search Network": [True],
@@ -278,7 +278,7 @@ def test_validate_output_data(
                     "Station To": "B",
                 }
             ),
-            "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO",
+            "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO}",
             "USA - A - B",
         ),
     ],

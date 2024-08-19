@@ -215,7 +215,7 @@ class TestProcessCampaignData:
                             "Default max. CPC",
                         ],
                         [
-                            "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO",
+                            "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO}",
                             100,
                             True,
                             False,
@@ -415,9 +415,9 @@ class TestProcessData:
         merged_campaigns_ad_groups_df = pd.DataFrame(
             {
                 "Campaign Name": [
-                    "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO"
+                    "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO}"
                 ],
-                "Ad Group Name": ["INSERT_STATION_FROM - INSERT_STATION_TO"],
+                "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                 "Match Type": ["Exact"],
             }
         )
@@ -487,9 +487,9 @@ class TestProcessData:
         merged_campaigns_ad_groups_df = pd.DataFrame(
             {
                 "Campaign Name": [
-                    "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO"
+                    "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO}"
                 ],
-                "Ad Group Name": ["INSERT_STATION_FROM - INSERT_STATION_TO"],
+                "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                 "Match Type": ["Exact"],
             }
         )
