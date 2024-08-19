@@ -209,6 +209,7 @@ class TestProcessCampaignData:
                     values=[
                         [
                             "Campaign Name",
+                            "Language Code",
                             "Campaign Budget",
                             "Search Network",
                             "Google Search Network",
@@ -216,6 +217,7 @@ class TestProcessCampaignData:
                         ],
                         [
                             "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO}",
+                            "EN",
                             100,
                             True,
                             False,
@@ -245,12 +247,13 @@ class TestProcessCampaignData:
                     values=[
                         [
                             "Campaign Name",
+                            "Language Code",
                             "Campaign Budget",
                             "Search Network",
                             "Google Search Network",
                             "Default max. CPC",
                         ],
-                        ["India - Delhi - Mumbai", 100, True, False, 1.2],
+                        ["India - Delhi - Mumbai", "EN", 100, True, False, 1.2],
                     ],
                 ),
             ),
@@ -370,6 +373,7 @@ class TestProcessData:
                     values=[
                         [
                             "Campaign Name",
+                            "Language Code",
                             "Ad Group Name",
                             "Match Type",
                             "Keyword",
@@ -377,7 +381,8 @@ class TestProcessData:
                             "Negative",
                         ],
                         [
-                            "India - Delhi - Mumbai",
+                            "India - Delhi - Mumbai - EN",
+                            "EN",
                             "Delhi - Mumbai",
                             "Exact",
                             "Keyword A",
@@ -385,7 +390,8 @@ class TestProcessData:
                             "False",
                         ],
                         [
-                            "India - Delhi - Mumbai",
+                            "India - Delhi - Mumbai - EN",
+                            "EN",
                             "Mumbai - Delhi",
                             "Exact",
                             "Keyword A",
@@ -393,7 +399,8 @@ class TestProcessData:
                             "False",
                         ],
                         [
-                            "India - Delhi - Mumbai",
+                            "India - Delhi - Mumbai - EN",
+                            "EN",
                             None,
                             "Broad",
                             "Keyword N",
@@ -415,8 +422,9 @@ class TestProcessData:
         merged_campaigns_ad_groups_df = pd.DataFrame(
             {
                 "Campaign Name": [
-                    "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO}"
+                    "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_LANGUAGE_CODE}"
                 ],
+                "Language Code": ["EN"],
                 "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                 "Match Type": ["Exact"],
             }
@@ -487,8 +495,9 @@ class TestProcessData:
         merged_campaigns_ad_groups_df = pd.DataFrame(
             {
                 "Campaign Name": [
-                    "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO}"
+                    "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_LANGUAGE_CODE}"
                 ],
+                "Language Code": ["EN"],
                 "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                 "Match Type": ["Exact"],
             }
@@ -505,6 +514,7 @@ class TestProcessData:
                 [
                     "Issues",
                     "Campaign Name",
+                    "Language Code",
                     "Ad Group Name",
                     "Match Type",
                     "Final URL",
@@ -518,7 +528,8 @@ class TestProcessData:
                 ],
                 [
                     "Headline length should be less than 30 characters, found 31 in column Headline 1.\n",
-                    "India - Delhi - Mumbai",
+                    "India - Delhi - Mumbai - EN",
+                    "EN",
                     "Delhi - Mumbai",
                     "Exact",
                     "https://www.example.com/from",
@@ -532,7 +543,8 @@ class TestProcessData:
                 ],
                 [
                     "Headline length should be less than 30 characters, found 31 in column Headline 1.\n",
-                    "India - Delhi - Mumbai",
+                    "India - Delhi - Mumbai - EN",
+                    "EN",
                     "Mumbai - Delhi",
                     "Exact",
                     "https://www.example.com/to",

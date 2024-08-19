@@ -31,13 +31,17 @@ INSERT_STATION_FROM = "{INSERT_STATION_FROM}"
 INSERT_STATION_TO = "{INSERT_STATION_TO}"
 INSERT_COUNTRY = "{INSERT_COUNTRY}"
 INSERT_CRITERION_TYPE = "{INSERT_CRITERION_TYPE}"
+INSERT_LANGUAGE_CODE = "{INSERT_LANGUAGE_CODE}"
 
 
-def _update_campaign_name(new_campaign_row: pd.Series, campaign_name: str) -> str:
+def _update_campaign_name(
+    new_campaign_row: pd.Series, campaign_name: str, language_code: str
+) -> str:
     campaign_name = campaign_name.format(
         INSERT_COUNTRY=new_campaign_row["Country"],
         INSERT_STATION_FROM=new_campaign_row["Station From"],
         INSERT_STATION_TO=new_campaign_row["Station To"],
+        INSERT_LANGUAGE_CODE=language_code,
     )
     return campaign_name
 
@@ -50,7 +54,9 @@ def process_campaign_data_f(
         for _, template_row in campaigns_template_df.iterrows():
             new_row = template_row.copy()
             new_row["Campaign Name"] = _update_campaign_name(
-                new_campaign_row, campaign_name=new_row["Campaign Name"]
+                new_campaign_row,
+                campaign_name=new_row["Campaign Name"],
+                language_code=new_row["Language Code"],
             )
             if final_df is None:
                 final_df = pd.DataFrame([new_row], columns=template_row.index)
@@ -97,7 +103,9 @@ def process_data_f(
             for station in stations:
                 new_row = template_row.copy()
                 new_row["Campaign Name"] = _update_campaign_name(
-                    new_campaign_row, campaign_name=new_row["Campaign Name"]
+                    new_campaign_row,
+                    campaign_name=new_row["Campaign Name"],
+                    language_code=new_row["Language Code"],
                 )
 
                 new_row = new_row.str.replace(

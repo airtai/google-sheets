@@ -59,8 +59,9 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
             pd.DataFrame(
                 {
                     "Campaign Name": [
-                        "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO"
+                        "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO - INSERT-LANGUAGE_CODE"
                     ],
+                    "Language Code": ["EN"],
                     "Ad Group Name": ["INSERT_STATION_FROM - INSERT_STATION_TO"],
                     "Match Type": ["Exact"],
                 }
@@ -81,15 +82,16 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
             pd.DataFrame(
                 {
                     "Campaign": [
-                        "USA - A - C",
-                        "USA - A - C",
-                        "USA - B - D",
-                        "USA - B - D",
-                        "USA - A - C",
-                        "USA - A - C",
-                        "USA - B - D",
-                        "USA - B - D",
+                        "USA - A - C - EN",
+                        "USA - A - C - EN",
+                        "USA - B - D - EN",
+                        "USA - B - D - EN",
+                        "USA - A - C - EN",
+                        "USA - A - C - EN",
+                        "USA - B - D - EN",
+                        "USA - B - D - EN",
                     ],
+                    "Language Code": ["EN", "EN", "EN", "EN", "EN", "EN", "EN", "EN"],
                     "Ad Group": [
                         "A - C",
                         "C - A",
@@ -109,8 +111,9 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
             pd.DataFrame(
                 {
                     "Campaign Name": [
-                        "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO"
+                        "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO - INSERT-LANGUAGE_CODE"
                     ],
+                    "Language Code": ["EN"],
                     "Ad Group Name": ["INSERT_STATION_FROM - INSERT_STATION_TO"],
                     "Match Type": ["Exact"],
                 }
@@ -131,15 +134,16 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
             pd.DataFrame(
                 {
                     "Campaign": [
-                        "USA - A - C",
-                        "USA - A - C",
-                        "USA - B - D",
-                        "USA - B - D",
-                        "USA - A - C",
-                        "USA - A - C",
-                        "USA - B - D",
-                        "USA - B - D",
+                        "USA - A - C - EN",
+                        "USA - A - C - EN",
+                        "USA - B - D - EN",
+                        "USA - B - D - EN",
+                        "USA - A - C - EN",
+                        "USA - A - C - EN",
+                        "USA - B - D - EN",
+                        "USA - B - D - EN",
                     ],
+                    "Language Code": ["EN", "EN", "EN", "EN", "EN", "EN", "EN", "EN"],
                     "Ad Group": [
                         "A - C",
                         "C - A",
@@ -175,8 +179,9 @@ def test_process_data_f(
             pd.DataFrame(
                 {
                     "Campaign Name": [
-                        "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO}"
+                        "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_LANGUAGE_CODE}"
                     ],
+                    "Language Code": ["EN"],
                     "Campaign Budget": ["100"],
                     "Search Network": [True],
                     "Google Search Network": [False],
@@ -193,9 +198,10 @@ def test_process_data_f(
             pd.DataFrame(
                 {
                     "Campaign Name": [
-                        "USA - A - C",
-                        "USA - B - D",
+                        "USA - A - C - EN",
+                        "USA - B - D - EN",
                     ],
+                    "Language Code": ["EN", "EN"],
                     "Campaign Budget": ["100", "100"],
                     "Search Network": [True, True],
                     "Google Search Network": [False, False],
@@ -268,7 +274,7 @@ def test_validate_output_data(
 
 
 @pytest.mark.parametrize(
-    ("new_camaign_row", "campaign_name", "expected"),
+    ("new_camaign_row", "campaign_name", "language_code", "expected"),
     [
         (
             pd.Series(
@@ -279,11 +285,14 @@ def test_validate_output_data(
                 }
             ),
             "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO}",
+            "EN",
             "USA - A - B",
         ),
     ],
 )
 def test_update_campaign_name(
-    new_camaign_row: pd.Series, campaign_name: str, expected: str
+    new_camaign_row: pd.Series, campaign_name: str, language_code: str, expected: str
 ) -> None:
-    assert _update_campaign_name(new_camaign_row, campaign_name) == expected
+    assert (
+        _update_campaign_name(new_camaign_row, campaign_name, language_code) == expected
+    )

@@ -323,6 +323,7 @@ NEW_CAMPAIGN_MANDATORY_COLUMNS = [
 
 MANDATORY_CAMPAIGN_TEMPLATE_COLUMNS = [
     "Campaign Name",
+    "Language Code",
     "Campaign Budget",
     "Search Network",
     "Google Search Network",
