@@ -12,7 +12,12 @@ from google.auth.exceptions import RefreshError
 from googleapiclient.errors import HttpError
 
 from . import __version__
-from .data_processing import process_data_f, validate_input_data, validate_output_data
+from .data_processing import (
+    process_campaign_data_f,
+    process_data_f,
+    validate_input_data,
+    validate_output_data,
+)
 from .db_helpers import get_db_connection
 from .google_api import (
     build_service,
@@ -315,6 +320,15 @@ NEW_CAMPAIGN_MANDATORY_COLUMNS = [
     "Final Url From",
     "Final Url To",
 ]
+
+MANDATORY_CAMPAIGN_TEMPLATE_COLUMNS = [
+    "Campaign Name",
+    "Campaign Budget",
+    "Search Network",
+    "Google Search Network",
+    "Default max. CPC",
+]
+
 MANDATORY_AD_TEMPLATE_COLUMNS = [
     "Headline 1",
     "Headline 2",
@@ -337,6 +351,66 @@ def _validate_target_resource(target_resource: Optional[str]) -> None:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="The target resource should be either 'ad' or 'keyword'.",
         )
+
+
+async def process_campaign_data(
+    template_sheet_values: GoogleSheetValues,
+    new_campaign_sheet_values: GoogleSheetValues,
+) -> GoogleSheetValues:
+    if (
+        len(template_sheet_values.values) < 2  # type: ignore
+        or len(new_campaign_sheet_values.values) < 2  # type: ignore
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Both template and new campaign data should have at least two rows (header and data).",
+        )
+    try:
+        template_df = pd.DataFrame(
+            template_sheet_values.values[1:],  # type: ignore
+            columns=template_sheet_values.values[0],  # type: ignore
+        )
+        new_campaign_df = pd.DataFrame(
+            new_campaign_sheet_values.values[1:],  # type: ignore
+            columns=new_campaign_sheet_values.values[0],  # type: ignore
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid data format. Please provide data in the correct format: {e}",
+        ) from e
+
+    validation_error_msg = validate_input_data(
+        df=new_campaign_df,
+        mandatory_columns=NEW_CAMPAIGN_MANDATORY_COLUMNS,
+        name="new campaign",
+    )
+
+    validation_error_msg += validate_input_data(
+        df=template_df,
+        mandatory_columns=MANDATORY_CAMPAIGN_TEMPLATE_COLUMNS,
+        name="campaign template",
+    )
+
+    if validation_error_msg:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=validation_error_msg
+        )
+
+    processed_df = process_campaign_data_f(
+        campaigns_template_df=template_df,
+        new_campaign_df=new_campaign_df,
+    )
+
+    validated_df = validate_output_data(
+        processed_df,
+        target_resource="campaign",  # type: ignore
+    )
+
+    issues_present = "Issues" in validated_df.columns
+    values = [validated_df.columns.tolist(), *validated_df.values.tolist()]
+
+    return GoogleSheetValues(values=values, issues_present=issues_present)
 
 
 async def process_data(
@@ -446,6 +520,34 @@ async def process_campaigns_and_ad_groups(
     return pd.merge(campaign_template_df, ad_group_template_df, how="cross")
 
 
+async def _create_and_update_sheet(
+    user_id: int,
+    new_campaign_spreadsheet_id: str,
+    processed_values: GoogleSheetValues,
+    target_resource: str,
+) -> str:
+    title = (
+        f"Captn - {target_resource.capitalize()}s {datetime.now():%Y-%m-%d %H:%M:%S}"  # type: ignore
+    )
+    await create_sheet(
+        user_id=user_id,
+        spreadsheet_id=new_campaign_spreadsheet_id,
+        title=title,
+    )
+    await update_sheet(
+        user_id=user_id,
+        spreadsheet_id=new_campaign_spreadsheet_id,
+        title=title,
+        sheet_values=processed_values,
+    )
+    response = f"Sheet with the name '{title}' has been created successfully.\n"
+    if processed_values.issues_present:
+        response += """But there are issues present in the data.
+Please check the 'Issues' column and correct the data accordingly.\n\n"""
+
+    return response
+
+
 @app.post(
     "/process-spreadsheet",
     description="Process data to generate new ads or keywords based on the template",
@@ -509,6 +611,19 @@ async def process_spreadsheet(
             ad_group_template_values=ad_group_template_values,
         )
 
+        drop_columns = [
+            "Campaign Budget",
+            "Search Network",
+            "Google Search Network",
+            "Default max. CPC",
+        ]
+        drop_columns += [
+            col
+            for col in merged_campaigns_ad_groups_df.columns
+            if col.lower().startswith("callout")
+        ]
+        merged_campaigns_ad_groups_df.drop(columns=drop_columns, inplace=True)
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -532,7 +647,18 @@ new_campaign_values: {new_campaign_values}
 Please provide data in the correct format.""",
         )
 
-    response = ""
+    processed_values = await process_campaign_data(
+        template_sheet_values=campaign_template_values,
+        new_campaign_sheet_values=new_campaign_values,
+    )
+
+    response = await _create_and_update_sheet(
+        user_id=user_id,
+        new_campaign_spreadsheet_id=new_campaign_spreadsheet_id,  # type: ignore[arg-type]
+        processed_values=processed_values,
+        target_resource="campaign",
+    )
+
     for template_values, target_resource in zip(
         [ads_template_values, keywords_template_values], ["ad", "keyword"]
     ):
@@ -543,21 +669,10 @@ Please provide data in the correct format.""",
             target_resource=target_resource,
         )
 
-        title = f"Captn - {target_resource.capitalize()}s {datetime.now():%Y-%m-%d %H:%M:%S}"  # type: ignore
-        await create_sheet(
+        response += await _create_and_update_sheet(
             user_id=user_id,
-            spreadsheet_id=new_campaign_spreadsheet_id,
-            title=title,
+            new_campaign_spreadsheet_id=new_campaign_spreadsheet_id,  # type: ignore[arg-type]
+            processed_values=processed_values,
+            target_resource=target_resource,
         )
-        await update_sheet(
-            user_id=user_id,
-            spreadsheet_id=new_campaign_spreadsheet_id,
-            title=title,
-            sheet_values=processed_values,
-        )
-        response += f"Sheet with the name '{title}' has been created successfully.\n"
-        if processed_values.issues_present:
-            response += """But there are issues present in the data.
-Please check the 'Issues' column and correct the data accordingly.\n\n"""
-
     return response

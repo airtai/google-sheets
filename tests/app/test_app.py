@@ -7,7 +7,12 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from googleapiclient.errors import HttpError
 
-from google_sheets.app import _check_parameters_are_not_none, app, process_data
+from google_sheets.app import (
+    _check_parameters_are_not_none,
+    app,
+    process_campaign_data,
+    process_data,
+)
 from google_sheets.model import GoogleSheetValues
 
 client = TestClient(app)
@@ -164,6 +169,113 @@ class TestGetAllFileNames:
             mock_get_files.assert_called_once()
             assert response.status_code == 200
             assert response.json() == expected
+
+
+class TestProcessCampaignData:
+    @pytest.mark.parametrize(
+        ("template_sheet_values", "new_campaign_sheet_values", "detail"),
+        [
+            (
+                GoogleSheetValues(
+                    values=[
+                        ["Campaign Name"],
+                    ]
+                ),
+                GoogleSheetValues(
+                    values=[
+                        ["Country", "Station From", "Station To"],
+                        ["India", "Delhi", "Mumbai"],
+                    ]
+                ),
+                "Both template and new campaign data should have at least two rows",
+            ),
+            (
+                GoogleSheetValues(
+                    values=[
+                        ["Fake column"],
+                        ["fake"],
+                    ]
+                ),
+                GoogleSheetValues(
+                    values=[
+                        ["Country", "Station From", "Station To"],
+                        ["India", "Delhi", "Mumbai"],
+                    ]
+                ),
+                "Mandatory columns missing in the campaign template data.",
+            ),
+            (
+                GoogleSheetValues(
+                    values=[
+                        [
+                            "Campaign Name",
+                            "Campaign Budget",
+                            "Search Network",
+                            "Google Search Network",
+                            "Default max. CPC",
+                        ],
+                        [
+                            "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO",
+                            100,
+                            True,
+                            False,
+                            1.2,
+                        ],
+                    ]
+                ),
+                GoogleSheetValues(
+                    values=[
+                        [
+                            "Country",
+                            "Station From",
+                            "Station To",
+                            "Final Url From",
+                            "Final Url To",
+                        ],
+                        [
+                            "India",
+                            "Delhi",
+                            "Mumbai",
+                            "https://www.example.com/from",
+                            "https://www.example.com/to",
+                        ],
+                    ]
+                ),
+                GoogleSheetValues(
+                    values=[
+                        [
+                            "Campaign Name",
+                            "Campaign Budget",
+                            "Search Network",
+                            "Google Search Network",
+                            "Default max. CPC",
+                        ],
+                        ["India - Delhi - Mumbai", 100, True, False, 1.2],
+                    ],
+                ),
+            ),
+        ],
+    )
+    @pytest.mark.asyncio()
+    async def test_process_campaign_data(
+        self,
+        template_sheet_values: GoogleSheetValues,
+        new_campaign_sheet_values: GoogleSheetValues,
+        detail: Union[str, GoogleSheetValues],
+    ) -> None:
+        if isinstance(detail, GoogleSheetValues):
+            processed_data = await process_campaign_data(
+                template_sheet_values=template_sheet_values,
+                new_campaign_sheet_values=new_campaign_sheet_values,
+            )
+            assert processed_data.model_dump() == detail.model_dump()
+        else:
+            with pytest.raises(HTTPException) as exc:
+                await process_campaign_data(
+                    template_sheet_values=template_sheet_values,
+                    new_campaign_sheet_values=new_campaign_sheet_values,
+                )
+            assert detail in exc.value.detail
 
 
 class TestProcessData:

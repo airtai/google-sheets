@@ -2,7 +2,12 @@ from typing import List, Literal, Optional
 
 import pandas as pd
 
-__all__ = ["process_data_f", "validate_input_data", "validate_output_data"]
+__all__ = [
+    "process_campaign_data_f",
+    "process_data_f",
+    "validate_input_data",
+    "validate_output_data",
+]
 
 
 def validate_input_data(
@@ -222,10 +227,9 @@ def _validate_output_data_ad(df: pd.DataFrame) -> pd.DataFrame:  # noqa: C901
 
 
 def validate_output_data(
-    df: pd.DataFrame, target_resource: Literal["ad", "keyword"]
+    df: pd.DataFrame, target_resource: Literal["ad", "campaign" "keyword"]
 ) -> pd.DataFrame:
-    if target_resource == "keyword":
-        # No validation required for keyword data currently
-        return df
-
-    return _validate_output_data_ad(df)
+    if target_resource == "ad":
+        return _validate_output_data_ad(df)
+    # No validation required for campaign and keyword data currently
+    return df
