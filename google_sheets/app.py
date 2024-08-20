@@ -145,6 +145,14 @@ async def login_callback(
     return RedirectResponse(redirect_uri)
 
 
+def _fill_rows_with_none(rows: List[List[Any]]) -> List[List[Any]]:
+    max_len = len(rows[0])
+    for i, row in enumerate(rows[1:]):
+        if len(row) < max_len:
+            rows[i + 1] += [None] * (max_len - len(row))
+    return rows
+
+
 @app.get("/get-sheet", description="Get data from a Google Sheet")
 async def get_sheet(
     user_id: Annotated[
@@ -168,6 +176,8 @@ async def get_sheet(
 
     if not values:
         return "No data found."
+
+    values = _fill_rows_with_none(values)
 
     return GoogleSheetValues(values=values)
 
@@ -624,7 +634,7 @@ async def process_spreadsheet(
         drop_columns += [
             col
             for col in merged_campaigns_ad_groups_df.columns
-            if col.lower().startswith("callout")
+            if col.lower().startswith("callout") or col.lower().startswith("sitelink")
         ]
         merged_campaigns_ad_groups_df.drop(columns=drop_columns, inplace=True)
 

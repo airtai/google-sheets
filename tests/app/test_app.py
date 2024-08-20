@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -9,6 +9,7 @@ from googleapiclient.errors import HttpError
 
 from google_sheets.app import (
     _check_parameters_are_not_none,
+    _fill_rows_with_none,
     app,
     process_campaign_data,
     process_data,
@@ -19,6 +20,45 @@ client = TestClient(app)
 
 
 class TestGetSheet:
+    @pytest.mark.parametrize(
+        ("values", "expected"),
+        [
+            (
+                [
+                    ["Campaign", "Ad Group", "Keyword"],
+                    ["Campaign A", "Ad group A", "Keyword A"],
+                    ["Campaign A", "Ad group A", "Keyword B"],
+                    ["Campaign A", "Ad group A", "Keyword C"],
+                ],
+                [
+                    ["Campaign", "Ad Group", "Keyword"],
+                    ["Campaign A", "Ad group A", "Keyword A"],
+                    ["Campaign A", "Ad group A", "Keyword B"],
+                    ["Campaign A", "Ad group A", "Keyword C"],
+                ],
+            ),
+            (
+                [
+                    ["Campaign", "Ad Group", "Keyword"],
+                    ["Campaign A"],
+                    ["Campaign A", "Ad group A"],
+                    ["Campaign A", "Ad group A", "Keyword C"],
+                ],
+                [
+                    ["Campaign", "Ad Group", "Keyword"],
+                    ["Campaign A", None, None],
+                    ["Campaign A", "Ad group A", None],
+                    ["Campaign A", "Ad group A", "Keyword C"],
+                ],
+            ),
+        ],
+    )
+    def test_fill_rows_with_none(
+        self, values: List[List[str]], expected: List[List[Optional[str]]]
+    ) -> None:
+        filled_sheet_values = _fill_rows_with_none(values)
+        assert filled_sheet_values == expected
+
     def test_get_sheet(self) -> None:
         with patch(
             "google_sheets.google_api.service._load_user_credentials",

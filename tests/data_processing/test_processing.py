@@ -4,6 +4,8 @@ import pandas as pd
 import pytest
 
 from google_sheets.data_processing.processing import (
+    _copy_all_with_prefixes,
+    _get_target_location,
     _update_campaign_name,
     _validate_language_codes,
     process_campaign_data_f,
@@ -287,6 +289,47 @@ def test_process_data_f(
 
 
 @pytest.mark.parametrize(
+    ("new_campaign_row", "new_row", "expected"),
+    [
+        (
+            pd.Series(
+                {
+                    "Country": "USA",
+                    "Station From": "A",
+                    "Station To": "B",
+                    "Exclude Location 1": "Austria",
+                    "Include Location 1": "Croatia",
+                    "Include Location 2": "Croatia",
+                    "Target Language 1": "English",
+                }
+            ),
+            pd.Series(
+                {
+                    "Campaign Name": "USA - A - B - EN",
+                    "Language Code": "EN",
+                }
+            ),
+            pd.Series(
+                {
+                    "Campaign Name": "USA - A - B - EN",
+                    "Language Code": "EN",
+                    "Exclude Location 1": "Austria",
+                    "Include Location 1": "Croatia",
+                    "Include Location 2": "Croatia",
+                    "Target Language 1": "English",
+                }
+            ),
+        ),
+    ],
+)
+def test_copy_all_with_prefixes(
+    new_campaign_row: pd.Series, new_row: pd.Series, expected: pd.Series
+) -> None:
+    new_row = _copy_all_with_prefixes(new_campaign_row, new_row)
+    assert new_row.equals(expected)
+
+
+@pytest.mark.parametrize(
     ("campaigns_template_df", "new_campaign_df", "expected"),
     [
         (
@@ -389,7 +432,49 @@ def test_validate_output_data(
 
 
 @pytest.mark.parametrize(
-    ("new_camaign_row", "campaign_name", "language_code", "expected"),
+    ("new_campaign_row", "expected"),
+    [
+        (
+            pd.Series(
+                {
+                    "Country": "USA",
+                    "Include Location 1": "Croatia",
+                }
+            ),
+            "Croatia",
+        ),
+        (
+            pd.Series(
+                {
+                    "Country": "USA",
+                    "Include Location 1": "Croatia",
+                    "Include Location 2": "Slovenia",
+                }
+            ),
+            "Croatia-Slovenia",
+        ),
+        (
+            pd.Series(
+                {
+                    "Country": "USA",
+                }
+            ),
+            "Worldwide",
+        ),
+    ],
+)
+def test_get_target_location(new_campaign_row: pd.Series, expected: str) -> None:
+    assert _get_target_location(new_campaign_row) == expected
+
+
+@pytest.mark.parametrize(
+    (
+        "new_camaign_row",
+        "campaign_name",
+        "language_code",
+        "include_locations",
+        "expected",
+    ),
     [
         (
             pd.Series(
@@ -399,17 +484,25 @@ def test_validate_output_data(
                     "Station To": "B",
                 }
             ),
-            "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO}",
+            "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_TARGET_LOCATION}",
             "EN",
-            "USA - A - B",
+            "C",
+            "USA - A - B - C",
         ),
     ],
 )
 def test_update_campaign_name(
-    new_camaign_row: pd.Series, campaign_name: str, language_code: str, expected: str
+    new_camaign_row: pd.Series,
+    campaign_name: str,
+    language_code: str,
+    include_locations: str,
+    expected: str,
 ) -> None:
     assert (
-        _update_campaign_name(new_camaign_row, campaign_name, language_code) == expected
+        _update_campaign_name(
+            new_camaign_row, campaign_name, language_code, include_locations
+        )
+        == expected
     )
 
 

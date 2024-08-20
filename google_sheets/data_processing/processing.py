@@ -35,13 +35,17 @@ INSERT_LANGUAGE_CODE = "{INSERT_LANGUAGE_CODE}"
 
 
 def _update_campaign_name(
-    new_campaign_row: pd.Series, campaign_name: str, language_code: str
+    new_campaign_row: pd.Series,
+    campaign_name: str,
+    language_code: str,
+    include_locations: str,
 ) -> str:
     campaign_name = campaign_name.format(
         INSERT_COUNTRY=new_campaign_row["Country"],
         INSERT_STATION_FROM=new_campaign_row["Station From"],
         INSERT_STATION_TO=new_campaign_row["Station To"],
         INSERT_LANGUAGE_CODE=language_code,
+        INSERT_TARGET_LOCATION=include_locations,
     )
     return campaign_name
 
@@ -62,6 +66,41 @@ def _validate_language_codes(
         )
 
 
+COPY_ALL_WITH_PREFIX = [
+    "Exclude Location",
+    "Include Location",
+    "Target Language",
+]
+
+
+def _copy_all_with_prefixes(
+    new_campaign_row: pd.Series,
+    new_row: pd.Series,
+    prefixes: List[str] = COPY_ALL_WITH_PREFIX,
+) -> pd.Series:
+    for prefix in prefixes:
+        columns = [col for col in new_campaign_row.index if col.startswith(prefix)]
+        for col in columns:
+            new_row[col] = new_campaign_row[col]
+    return new_row
+
+
+def _get_target_location(new_campaign_row: pd.Series) -> str:
+    include_locations_columns = [
+        col for col in new_campaign_row.index if col.startswith("Include Location")
+    ]
+    include_locations_values = [
+        new_campaign_row[col]
+        for col in include_locations_columns
+        if new_campaign_row[col]
+    ]
+    if include_locations_values:
+        include_locations = "-".join(include_locations_values)
+    else:
+        include_locations = "Worldwide"
+    return include_locations
+
+
 def process_campaign_data_f(
     campaigns_template_df: pd.DataFrame, new_campaign_df: pd.DataFrame
 ) -> pd.DataFrame:
@@ -77,21 +116,32 @@ def process_campaign_data_f(
     )
 
     final_df = None
+    # columns are campaign_template_df.columns + columns which start with COPY_ALL_WITH_PREFIX
+    columns = list(campaigns_template_df.columns) + [
+        col
+        for col in new_campaign_df.columns
+        if any(col.startswith(prefix) for prefix in COPY_ALL_WITH_PREFIX)
+    ]
     for _, new_campaign_row in new_campaign_df.iterrows():
         for _, template_row in campaigns_template_df[
             campaigns_template_df["Language Code"] == new_campaign_row["Language Code"]
         ].iterrows():
             new_row = template_row.copy()
+            new_row = _copy_all_with_prefixes(new_campaign_row, new_row)
+            include_locations = _get_target_location(new_campaign_row)
+
             new_row["Campaign Name"] = _update_campaign_name(
                 new_campaign_row,
                 campaign_name=new_row["Campaign Name"],
                 language_code=new_row["Language Code"],
+                include_locations=include_locations,
             )
+
             if final_df is None:
-                final_df = pd.DataFrame([new_row], columns=template_row.index)
+                final_df = pd.DataFrame([new_row], columns=columns)
             else:
                 final_df = pd.concat(
-                    [final_df, pd.DataFrame([new_row], columns=template_row.index)],
+                    [final_df, pd.DataFrame([new_row], columns=columns)],
                     ignore_index=True,
                 )
 
@@ -150,10 +200,12 @@ def process_data_f(
 
             for station in stations:
                 new_row = template_row.copy()
+                include_locations = _get_target_location(new_campaign_row)
                 new_row["Campaign Name"] = _update_campaign_name(
                     new_campaign_row,
                     campaign_name=new_row["Campaign Name"],
                     language_code=new_row["Language Code"],
+                    include_locations=include_locations,
                 )
 
                 new_row = new_row.str.replace(
