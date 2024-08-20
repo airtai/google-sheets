@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional
+from typing import List, Literal
 
 import pandas as pd
 
@@ -46,12 +46,41 @@ def _update_campaign_name(
     return campaign_name
 
 
+def _validate_language_codes(
+    new_campaign_df: pd.DataFrame, valid_language_codes: List[str], table_name: str
+) -> None:
+    invalid_language_codes = new_campaign_df[
+        ~new_campaign_df["Language Code"].isin(valid_language_codes)
+    ]["Language Code"].unique()
+    if invalid_language_codes.size:
+        raise ValueError(
+            f"""Table: '{table_name}' currently does NOT have any data for the following language codes:
+    {invalid_language_codes}.
+
+    Please provide data for the above language codes or choose a different language code.
+    """
+        )
+
+
 def process_campaign_data_f(
     campaigns_template_df: pd.DataFrame, new_campaign_df: pd.DataFrame
 ) -> pd.DataFrame:
+    new_campaign_df["Language Code"] = new_campaign_df["Language Code"].str.upper()
+    campaigns_template_df["Language Code"] = campaigns_template_df[
+        "Language Code"
+    ].str.upper()
+
+    _validate_language_codes(
+        new_campaign_df,
+        valid_language_codes=campaigns_template_df["Language Code"].unique(),
+        table_name="Campaigns",
+    )
+
     final_df = None
     for _, new_campaign_row in new_campaign_df.iterrows():
-        for _, template_row in campaigns_template_df.iterrows():
+        for _, template_row in campaigns_template_df[
+            campaigns_template_df["Language Code"] == new_campaign_row["Language Code"]
+        ].iterrows():
             new_row = template_row.copy()
             new_row["Campaign Name"] = _update_campaign_name(
                 new_campaign_row,
@@ -79,14 +108,26 @@ def process_data_f(
     merged_campaigns_ad_groups_df: pd.DataFrame,
     template_df: pd.DataFrame,
     new_campaign_df: pd.DataFrame,
-    target_resource: Optional[str] = None,
+    target_resource: str,
 ) -> pd.DataFrame:
+    merged_campaigns_ad_groups_df["Language Code"] = merged_campaigns_ad_groups_df[
+        "Language Code"
+    ].str.upper()
+    template_df["Language Code"] = template_df["Language Code"].str.upper()
+    new_campaign_df["Language Code"] = new_campaign_df["Language Code"].str.upper()
     template_df = pd.merge(
         merged_campaigns_ad_groups_df,
         template_df,
         how="inner",
         on="Language Code",
     )
+
+    _validate_language_codes(
+        new_campaign_df,
+        valid_language_codes=template_df["Language Code"].unique(),
+        table_name=target_resource,
+    )
+
     final_df = pd.DataFrame(columns=template_df.columns)
     for _, new_campaign_row in new_campaign_df.iterrows():
         for _, template_row in template_df[

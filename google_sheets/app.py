@@ -651,32 +651,37 @@ new_campaign_values: {new_campaign_values}
 Please provide data in the correct format.""",
         )
 
-    processed_values = await process_campaign_data(
-        template_sheet_values=campaign_template_values,
-        new_campaign_sheet_values=new_campaign_values,
-    )
-
-    response = await _create_and_update_sheet(
-        user_id=user_id,
-        new_campaign_spreadsheet_id=new_campaign_spreadsheet_id,  # type: ignore[arg-type]
-        processed_values=processed_values,
-        target_resource="campaign",
-    )
-
-    for template_values, target_resource in zip(
-        [ads_template_values, keywords_template_values], ["ad", "keyword"]
-    ):
-        processed_values = await process_data(
-            template_sheet_values=template_values,
+    try:
+        processed_values = await process_campaign_data(
+            template_sheet_values=campaign_template_values,
             new_campaign_sheet_values=new_campaign_values,
-            merged_campaigns_ad_groups_df=merged_campaigns_ad_groups_df,
-            target_resource=target_resource,
         )
 
-        response += await _create_and_update_sheet(
+        response = await _create_and_update_sheet(
             user_id=user_id,
             new_campaign_spreadsheet_id=new_campaign_spreadsheet_id,  # type: ignore[arg-type]
             processed_values=processed_values,
-            target_resource=target_resource,
+            target_resource="campaign",
         )
+
+        for template_values, target_resource in zip(
+            [ads_template_values, keywords_template_values], ["ad", "keyword"]
+        ):
+            processed_values = await process_data(
+                template_sheet_values=template_values,
+                new_campaign_sheet_values=new_campaign_values,
+                merged_campaigns_ad_groups_df=merged_campaigns_ad_groups_df,
+                target_resource=target_resource,
+            )
+
+            response += await _create_and_update_sheet(
+                user_id=user_id,
+                new_campaign_spreadsheet_id=new_campaign_spreadsheet_id,  # type: ignore[arg-type]
+                processed_values=processed_values,
+                target_resource=target_resource,
+            )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        ) from e
     return response
