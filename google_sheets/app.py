@@ -319,6 +319,7 @@ NEW_CAMPAIGN_MANDATORY_COLUMNS = [
     "Station To",
     "Final Url From",
     "Final Url To",
+    "Language Code",
 ]
 
 MANDATORY_CAMPAIGN_TEMPLATE_COLUMNS = [
@@ -331,6 +332,7 @@ MANDATORY_CAMPAIGN_TEMPLATE_COLUMNS = [
 ]
 
 MANDATORY_AD_TEMPLATE_COLUMNS = [
+    "Language Code",
     "Headline 1",
     "Headline 2",
     "Headline 3",
@@ -339,6 +341,7 @@ MANDATORY_AD_TEMPLATE_COLUMNS = [
 ]
 
 MANDATORY_KEYWORD_TEMPLATE_COLUMNS = [
+    "Language Code",
     "Keyword",
     "Keyword Match Type",
     "Level",

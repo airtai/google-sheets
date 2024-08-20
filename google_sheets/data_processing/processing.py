@@ -81,10 +81,17 @@ def process_data_f(
     new_campaign_df: pd.DataFrame,
     target_resource: Optional[str] = None,
 ) -> pd.DataFrame:
-    template_df = pd.merge(merged_campaigns_ad_groups_df, template_df, how="cross")
+    template_df = pd.merge(
+        merged_campaigns_ad_groups_df,
+        template_df,
+        how="inner",
+        on="Language Code",
+    )
     final_df = pd.DataFrame(columns=template_df.columns)
-    for _, template_row in template_df.iterrows():
-        for _, new_campaign_row in new_campaign_df.iterrows():
+    for _, new_campaign_row in new_campaign_df.iterrows():
+        for _, template_row in template_df[
+            template_df["Language Code"] == new_campaign_row["Language Code"]
+        ].iterrows():
             stations = [
                 {
                     "Station From": new_campaign_row["Station From"],
@@ -135,6 +142,7 @@ def process_data_f(
                     [final_df, pd.DataFrame([new_row])], ignore_index=True
                 )
 
+    final_df = final_df.drop(columns=["Language Code"])
     if target_resource == "keyword":
         final_df = final_df.drop(columns=["Keyword Match Type"])
     final_df = final_df.drop_duplicates(ignore_index=True)

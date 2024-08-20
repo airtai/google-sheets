@@ -233,6 +233,7 @@ class TestProcessCampaignData:
                             "Station To",
                             "Final Url From",
                             "Final Url To",
+                            "Language Code",
                         ],
                         [
                             "India",
@@ -240,6 +241,7 @@ class TestProcessCampaignData:
                             "Mumbai",
                             "https://www.example.com/from",
                             "https://www.example.com/to",
+                            "EN",
                         ],
                     ]
                 ),
@@ -326,6 +328,7 @@ class TestProcessData:
                             "Station To",
                             "Final Url From",
                             "Final Url To",
+                            "Language Code",
                         ],
                         [
                             "India",
@@ -333,6 +336,7 @@ class TestProcessData:
                             "Mumbai",
                             "https://www.example.com/from",
                             "https://www.example.com/to",
+                            "EN",
                         ],
                     ]
                 ),
@@ -346,9 +350,10 @@ class TestProcessData:
                             "Keyword Match Type",
                             "Level",
                             "Negative",
+                            "Language Code",
                         ],
-                        ["Keyword A", "Exact", None, "False"],
-                        ["Keyword N", "Broad", "Campaign", "True"],
+                        ["Keyword A", "Exact", None, "False", "EN"],
+                        ["Keyword N", "Broad", "Campaign", "True", "EN"],
                     ]
                 ),
                 GoogleSheetValues(
@@ -359,6 +364,7 @@ class TestProcessData:
                             "Station To",
                             "Final Url From",
                             "Final Url To",
+                            "Language Code",
                         ],
                         [
                             "India",
@@ -366,6 +372,7 @@ class TestProcessData:
                             "Mumbai",
                             "https://www.example.com/from",
                             "https://www.example.com/to",
+                            "EN",
                         ],
                     ]
                 ),
@@ -373,7 +380,6 @@ class TestProcessData:
                     values=[
                         [
                             "Campaign Name",
-                            "Language Code",
                             "Ad Group Name",
                             "Match Type",
                             "Keyword",
@@ -382,7 +388,6 @@ class TestProcessData:
                         ],
                         [
                             "India - Delhi - Mumbai - EN",
-                            "EN",
                             "Delhi - Mumbai",
                             "Exact",
                             "Keyword A",
@@ -391,7 +396,6 @@ class TestProcessData:
                         ],
                         [
                             "India - Delhi - Mumbai - EN",
-                            "EN",
                             "Mumbai - Delhi",
                             "Exact",
                             "Keyword A",
@@ -400,7 +404,6 @@ class TestProcessData:
                         ],
                         [
                             "India - Delhi - Mumbai - EN",
-                            "EN",
                             None,
                             "Broad",
                             "Keyword N",
@@ -453,6 +456,7 @@ class TestProcessData:
         template_sheet_values = GoogleSheetValues(
             values=[
                 [
+                    "Language Code",
                     "Final URL",
                     "Headline 1",
                     "Headline 2",
@@ -463,6 +467,7 @@ class TestProcessData:
                     "Path 2",
                 ],
                 [
+                    "EN",
                     "https://www.example.com/from",
                     "H" * 31,
                     "Headline 2",
@@ -482,6 +487,7 @@ class TestProcessData:
                     "Station To",
                     "Final Url From",
                     "Final Url To",
+                    "Language Code",
                 ],
                 [
                     "India",
@@ -489,6 +495,7 @@ class TestProcessData:
                     "Mumbai",
                     "https://www.example.com/from",
                     "https://www.example.com/to",
+                    "EN",
                 ],
             ]
         )
@@ -514,7 +521,6 @@ class TestProcessData:
                 [
                     "Issues",
                     "Campaign Name",
-                    "Language Code",
                     "Ad Group Name",
                     "Match Type",
                     "Final URL",
@@ -529,7 +535,6 @@ class TestProcessData:
                 [
                     "Headline length should be less than 30 characters, found 31 in column Headline 1.\n",
                     "India - Delhi - Mumbai - EN",
-                    "EN",
                     "Delhi - Mumbai",
                     "Exact",
                     "https://www.example.com/from",
@@ -544,7 +549,6 @@ class TestProcessData:
                 [
                     "Headline length should be less than 30 characters, found 31 in column Headline 1.\n",
                     "India - Delhi - Mumbai - EN",
-                    "EN",
                     "Mumbai - Delhi",
                     "Exact",
                     "https://www.example.com/to",
