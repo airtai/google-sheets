@@ -69,7 +69,8 @@ def _validate_language_codes(
 COPY_ALL_WITH_PREFIX = [
     "Exclude Location",
     "Include Location",
-    "Target Language",
+    "Include Language",
+    "Exclude Language",
 ]
 
 

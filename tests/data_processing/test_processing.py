@@ -300,7 +300,8 @@ def test_process_data_f(
                     "Exclude Location 1": "Austria",
                     "Include Location 1": "Croatia",
                     "Include Location 2": "Croatia",
-                    "Target Language 1": "English",
+                    "Include Language 1": "English",
+                    "Exclude Language 1": "German",
                 }
             ),
             pd.Series(
@@ -316,7 +317,8 @@ def test_process_data_f(
                     "Exclude Location 1": "Austria",
                     "Include Location 1": "Croatia",
                     "Include Location 2": "Croatia",
-                    "Target Language 1": "English",
+                    "Include Language 1": "English",
+                    "Exclude Language 1": "German",
                 }
             ),
         ),
