@@ -4,6 +4,11 @@ import pandas as pd
 import pytest
 
 from google_sheets.data_processing.processing import (
+    _copy_all_with_prefixes,
+    _get_target_location,
+    _update_campaign_name,
+    _validate_language_codes,
+    process_campaign_data_f,
     process_data_f,
     validate_input_data,
     validate_output_data,
@@ -57,9 +62,10 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
             pd.DataFrame(
                 {
                     "Campaign Name": [
-                        "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO"
+                        "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_LANGUAGE_CODE}"
                     ],
-                    "Ad Group Name": ["INSERT_STATION_FROM - INSERT_STATION_TO"],
+                    "Language Code": ["EN"],
+                    "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                     "Match Type": ["Exact"],
                 }
             ),
@@ -67,6 +73,10 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
                 {
                     "Keyword": ["k1", "k2"],
                     "Max CPC": ["", ""],
+                    "Language Code": ["EN", "EN"],
+                    "Negative": ["FALSE", "FALSE"],
+                    "Level": [None, None],
+                    "Keyword Match Type": ["Exact", "Exact"],
                 }
             ),
             pd.DataFrame(
@@ -74,21 +84,22 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
                     "Country": ["USA", "USA"],
                     "Station From": ["A", "B"],
                     "Station To": ["C", "D"],
+                    "Language Code": ["EN", "EN"],
                 }
             ),
             pd.DataFrame(
                 {
-                    "Campaign": [
-                        "USA - A - C",
-                        "USA - A - C",
-                        "USA - B - D",
-                        "USA - B - D",
-                        "USA - A - C",
-                        "USA - A - C",
-                        "USA - B - D",
-                        "USA - B - D",
+                    "Campaign Name": [
+                        "USA - A - C - EN",
+                        "USA - A - C - EN",
+                        "USA - B - D - EN",
+                        "USA - B - D - EN",
+                        "USA - A - C - EN",
+                        "USA - A - C - EN",
+                        "USA - B - D - EN",
+                        "USA - B - D - EN",
                     ],
-                    "Ad Group": [
+                    "Ad Group Name": [
                         "A - C",
                         "C - A",
                         "B - D",
@@ -97,9 +108,30 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
                         "C - A",
                         "B - D",
                         "D - B",
+                    ],
+                    "Match Type": [
+                        "Exact",
+                        "Exact",
+                        "Exact",
+                        "Exact",
+                        "Exact",
+                        "Exact",
+                        "Exact",
+                        "Exact",
                     ],
                     "Keyword": ["k1", "k1", "k1", "k1", "k2", "k2", "k2", "k2"],
                     "Max CPC": ["", "", "", "", "", "", "", ""],
+                    "Negative": [
+                        "FALSE",
+                        "FALSE",
+                        "FALSE",
+                        "FALSE",
+                        "FALSE",
+                        "FALSE",
+                        "FALSE",
+                        "FALSE",
+                    ],
+                    "Level": [None, None, None, None, None, None, None, None],
                 }
             ),
         ),
@@ -107,16 +139,21 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
             pd.DataFrame(
                 {
                     "Campaign Name": [
-                        "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO"
+                        "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_LANGUAGE_CODE}"
                     ],
-                    "Ad Group Name": ["INSERT_STATION_FROM - INSERT_STATION_TO"],
+                    "Language Code": ["EN"],
+                    "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                     "Match Type": ["Exact"],
                 }
             ),
             pd.DataFrame(
                 {
-                    "Keyword": ["k1 INSERT_STATION_FROM", "k2"],
+                    "Keyword": ["k1 {INSERT_STATION_FROM}", "k2"],
                     "Max CPC": ["", ""],
+                    "Language Code": ["EN", "EN"],
+                    "Negative": ["FALSE", "FALSE"],
+                    "Level": [None, None],
+                    "Keyword Match Type": ["Exact", "Exact"],
                 }
             ),
             pd.DataFrame(
@@ -124,21 +161,22 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
                     "Country": ["USA", "USA"],
                     "Station From": ["A", "B"],
                     "Station To": ["C", "D"],
+                    "Language Code": ["EN", "EN"],
                 }
             ),
             pd.DataFrame(
                 {
-                    "Campaign": [
-                        "USA - A - C",
-                        "USA - A - C",
-                        "USA - B - D",
-                        "USA - B - D",
-                        "USA - A - C",
-                        "USA - A - C",
-                        "USA - B - D",
-                        "USA - B - D",
+                    "Campaign Name": [
+                        "USA - A - C - EN",
+                        "USA - A - C - EN",
+                        "USA - B - D - EN",
+                        "USA - B - D - EN",
+                        "USA - A - C - EN",
+                        "USA - A - C - EN",
+                        "USA - B - D - EN",
+                        "USA - B - D - EN",
                     ],
-                    "Ad Group": [
+                    "Ad Group Name": [
                         "A - C",
                         "C - A",
                         "B - D",
@@ -147,9 +185,85 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
                         "C - A",
                         "B - D",
                         "D - B",
+                    ],
+                    "Match Type": [
+                        "Exact",
+                        "Exact",
+                        "Exact",
+                        "Exact",
+                        "Exact",
+                        "Exact",
+                        "Exact",
+                        "Exact",
                     ],
                     "Keyword": ["k1 A", "k1 C", "k1 B", "k1 D", "k2", "k2", "k2", "k2"],
                     "Max CPC": ["", "", "", "", "", "", "", ""],
+                    "Negative": [
+                        "FALSE",
+                        "FALSE",
+                        "FALSE",
+                        "FALSE",
+                        "FALSE",
+                        "FALSE",
+                        "FALSE",
+                        "FALSE",
+                    ],
+                    "Level": [None, None, None, None, None, None, None, None],
+                }
+            ),
+        ),
+        (
+            pd.DataFrame(
+                {
+                    "Campaign Name": [
+                        "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_LANGUAGE_CODE}",
+                        "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_LANGUAGE_CODE}",
+                    ],
+                    "Language Code": ["EN", "DE"],
+                    "Ad Group Name": [
+                        "{INSERT_STATION_FROM} - {INSERT_STATION_TO}",
+                        "{INSERT_STATION_FROM} - {INSERT_STATION_TO}",
+                    ],
+                    "Match Type": ["Exact", "Exact"],
+                }
+            ),
+            pd.DataFrame(
+                {
+                    "Keyword": ["k1", "k2"],
+                    "Max CPC": ["", ""],
+                    "Language Code": ["EN", "DE"],
+                    "Negative": ["FALSE", "FALSE"],
+                    "Level": [None, None],
+                    "Keyword Match Type": ["Exact", "Exact"],
+                }
+            ),
+            pd.DataFrame(
+                {
+                    "Country": ["USA", "USA"],
+                    "Station From": ["A", "B"],
+                    "Station To": ["C", "D"],
+                    "Language Code": ["EN", "DE"],
+                }
+            ),
+            pd.DataFrame(
+                {
+                    "Campaign Name": [
+                        "USA - A - C - EN",
+                        "USA - A - C - EN",
+                        "USA - B - D - DE",
+                        "USA - B - D - DE",
+                    ],
+                    "Ad Group Name": [
+                        "A - C",
+                        "C - A",
+                        "B - D",
+                        "D - B",
+                    ],
+                    "Match Type": ["Exact", "Exact", "Exact", "Exact"],
+                    "Keyword": ["k1", "k1", "k2", "k2"],
+                    "Max CPC": ["", "", "", ""],
+                    "Negative": ["FALSE", "FALSE", "FALSE", "FALSE"],
+                    "Level": [None, None, None, None],
                 }
             ),
         ),
@@ -159,11 +273,111 @@ def test_process_data_f(
     merged_campaigns_ad_groups_df: pd.DataFrame,
     template_df: pd.DataFrame,
     new_campaign_df: pd.DataFrame,
-    expected: List[List[str]],
+    expected: pd.DataFrame,
 ) -> None:
-    process_data_f(merged_campaigns_ad_groups_df, template_df, new_campaign_df).equals(
-        expected
+    processed_data = process_data_f(
+        merged_campaigns_ad_groups_df, template_df, new_campaign_df, "keyword"
     )
+    assert all(processed_data.columns == expected.columns)
+
+    processed_data = processed_data.astype(str).reset_index(drop=True)
+    expected = expected.astype(str).reset_index(drop=True)
+    expected = expected.sort_values(
+        by=["Campaign Name", "Ad Group Name"], ignore_index=True
+    )
+    assert processed_data.equals(expected)
+
+
+@pytest.mark.parametrize(
+    ("new_campaign_row", "new_row", "expected"),
+    [
+        (
+            pd.Series(
+                {
+                    "Country": "USA",
+                    "Station From": "A",
+                    "Station To": "B",
+                    "Exclude Location 1": "Austria",
+                    "Include Location 1": "Croatia",
+                    "Include Location 2": "Croatia",
+                    "Include Language 1": "English",
+                    "Exclude Language 1": "German",
+                }
+            ),
+            pd.Series(
+                {
+                    "Campaign Name": "USA - A - B - EN",
+                    "Language Code": "EN",
+                }
+            ),
+            pd.Series(
+                {
+                    "Campaign Name": "USA - A - B - EN",
+                    "Language Code": "EN",
+                    "Exclude Location 1": "Austria",
+                    "Include Location 1": "Croatia",
+                    "Include Location 2": "Croatia",
+                    "Include Language 1": "English",
+                    "Exclude Language 1": "German",
+                }
+            ),
+        ),
+    ],
+)
+def test_copy_all_with_prefixes(
+    new_campaign_row: pd.Series, new_row: pd.Series, expected: pd.Series
+) -> None:
+    new_row = _copy_all_with_prefixes(new_campaign_row, new_row)
+    assert new_row.equals(expected)
+
+
+@pytest.mark.parametrize(
+    ("campaigns_template_df", "new_campaign_df", "expected"),
+    [
+        (
+            pd.DataFrame(
+                {
+                    "Campaign Name": [
+                        "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_LANGUAGE_CODE}"
+                    ],
+                    "Language Code": ["EN"],
+                    "Campaign Budget": ["100"],
+                    "Search Network": [True],
+                    "Google Search Network": [False],
+                    "Default max. CPC": [0.3],
+                }
+            ),
+            pd.DataFrame(
+                {
+                    "Country": ["USA", "USA"],
+                    "Station From": ["A", "B"],
+                    "Station To": ["C", "D"],
+                    "Language Code": ["EN", "EN"],
+                }
+            ),
+            pd.DataFrame(
+                {
+                    "Campaign Name": [
+                        "USA - A - C - EN",
+                        "USA - B - D - EN",
+                    ],
+                    "Language Code": ["EN", "EN"],
+                    "Campaign Budget": ["100", "100"],
+                    "Search Network": [True, True],
+                    "Google Search Network": [False, False],
+                    "Default max. CPC": [0.3, 0.3],
+                },
+            ),
+        ),
+    ],
+)
+def test_process_campaign_data_f(
+    campaigns_template_df: pd.DataFrame,
+    new_campaign_df: pd.DataFrame,
+    expected: pd.DataFrame,
+) -> None:
+    processed_data = process_campaign_data_f(campaigns_template_df, new_campaign_df)
+    assert processed_data.equals(expected)
 
 
 @pytest.mark.parametrize(
@@ -217,3 +431,111 @@ def test_validate_output_data(
         expected["Issues"] = issues_column
 
     assert result.equals(expected)
+
+
+@pytest.mark.parametrize(
+    ("new_campaign_row", "expected"),
+    [
+        (
+            pd.Series(
+                {
+                    "Country": "USA",
+                    "Include Location 1": "Croatia",
+                }
+            ),
+            "Croatia",
+        ),
+        (
+            pd.Series(
+                {
+                    "Country": "USA",
+                    "Include Location 1": "Croatia",
+                    "Include Location 2": "Slovenia",
+                }
+            ),
+            "Croatia-Slovenia",
+        ),
+        (
+            pd.Series(
+                {
+                    "Country": "USA",
+                }
+            ),
+            "Worldwide",
+        ),
+    ],
+)
+def test_get_target_location(new_campaign_row: pd.Series, expected: str) -> None:
+    assert _get_target_location(new_campaign_row) == expected
+
+
+@pytest.mark.parametrize(
+    (
+        "new_camaign_row",
+        "campaign_name",
+        "language_code",
+        "include_locations",
+        "expected",
+    ),
+    [
+        (
+            pd.Series(
+                {
+                    "Country": "USA",
+                    "Station From": "A",
+                    "Station To": "B",
+                }
+            ),
+            "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_TARGET_LOCATION}",
+            "EN",
+            "C",
+            "USA - A - B - C",
+        ),
+    ],
+)
+def test_update_campaign_name(
+    new_camaign_row: pd.Series,
+    campaign_name: str,
+    language_code: str,
+    include_locations: str,
+    expected: str,
+) -> None:
+    assert (
+        _update_campaign_name(
+            new_camaign_row, campaign_name, language_code, include_locations
+        )
+        == expected
+    )
+
+
+@pytest.mark.parametrize(
+    ("new_campaign_df", "valid_language_codes", "raises_error"),
+    [
+        (
+            pd.DataFrame(
+                {
+                    "Language Code": ["EN", "DE", "FR"],
+                }
+            ),
+            ["EN", "DE", "FR"],
+            False,
+        ),
+        (
+            pd.DataFrame(
+                {
+                    "Language Code": ["EN", "DE", "FR"],
+                }
+            ),
+            ["EN", "DE"],
+            True,
+        ),
+    ],
+)
+def test_validate_language_codes(
+    new_campaign_df: pd.DataFrame, valid_language_codes: List[str], raises_error: bool
+) -> None:
+    if raises_error:
+        with pytest.raises(ValueError, match="FR"):
+            _validate_language_codes(new_campaign_df, valid_language_codes, "table")
+    else:
+        _validate_language_codes(new_campaign_df, valid_language_codes, "table")
