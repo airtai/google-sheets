@@ -1,8 +1,13 @@
-from typing import List, Literal, Optional
+from typing import List, Literal
 
 import pandas as pd
 
-__all__ = ["process_data_f", "validate_input_data", "validate_output_data"]
+__all__ = [
+    "process_campaign_data_f",
+    "process_data_f",
+    "validate_input_data",
+    "validate_output_data",
+]
 
 
 def validate_input_data(
@@ -22,22 +27,163 @@ Please provide the following columns: {mandatory_columns}
     return ""
 
 
-INSERT_STATION_FROM = "INSERT_STATION_FROM"
-INSERT_STATION_TO = "INSERT_STATION_TO"
-INSERT_COUNTRY = "INSERT_COUNTRY"
-INSERT_CRITERION_TYPE = "INSERT_CRITERION_TYPE"
+INSERT_STATION_FROM = "{INSERT_STATION_FROM}"
+INSERT_STATION_TO = "{INSERT_STATION_TO}"
+INSERT_COUNTRY = "{INSERT_COUNTRY}"
+INSERT_CRITERION_TYPE = "{INSERT_CRITERION_TYPE}"
+INSERT_LANGUAGE_CODE = "{INSERT_LANGUAGE_CODE}"
+
+
+def _update_campaign_name(
+    new_campaign_row: pd.Series,
+    campaign_name: str,
+    language_code: str,
+    include_locations: str,
+) -> str:
+    campaign_name = campaign_name.format(
+        INSERT_COUNTRY=new_campaign_row["Country"],
+        INSERT_STATION_FROM=new_campaign_row["Station From"],
+        INSERT_STATION_TO=new_campaign_row["Station To"],
+        INSERT_LANGUAGE_CODE=language_code,
+        INSERT_TARGET_LOCATION=include_locations,
+    )
+    return campaign_name
+
+
+def _validate_language_codes(
+    new_campaign_df: pd.DataFrame, valid_language_codes: List[str], table_name: str
+) -> None:
+    invalid_language_codes = new_campaign_df[
+        ~new_campaign_df["Language Code"].isin(valid_language_codes)
+    ]["Language Code"].unique()
+    if invalid_language_codes.size:
+        raise ValueError(
+            f"""Table: '{table_name}' currently does NOT have any data for the following language codes:
+    {invalid_language_codes}.
+
+    Please provide data for the above language codes or choose a different language code.
+    """
+        )
+
+
+COPY_ALL_WITH_PREFIX = [
+    "Exclude Location",
+    "Include Location",
+    "Include Language",
+    "Exclude Language",
+]
+
+
+def _copy_all_with_prefixes(
+    new_campaign_row: pd.Series,
+    new_row: pd.Series,
+    prefixes: List[str] = COPY_ALL_WITH_PREFIX,
+) -> pd.Series:
+    for prefix in prefixes:
+        columns = [col for col in new_campaign_row.index if col.startswith(prefix)]
+        for col in columns:
+            new_row[col] = new_campaign_row[col]
+    return new_row
+
+
+def _get_target_location(new_campaign_row: pd.Series) -> str:
+    include_locations_columns = [
+        col for col in new_campaign_row.index if col.startswith("Include Location")
+    ]
+    include_locations_values = [
+        new_campaign_row[col]
+        for col in include_locations_columns
+        if new_campaign_row[col]
+    ]
+    if include_locations_values:
+        include_locations = "-".join(include_locations_values)
+    else:
+        include_locations = "Worldwide"
+    return include_locations
+
+
+def process_campaign_data_f(
+    campaigns_template_df: pd.DataFrame, new_campaign_df: pd.DataFrame
+) -> pd.DataFrame:
+    new_campaign_df["Language Code"] = new_campaign_df["Language Code"].str.upper()
+    campaigns_template_df["Language Code"] = campaigns_template_df[
+        "Language Code"
+    ].str.upper()
+
+    _validate_language_codes(
+        new_campaign_df,
+        valid_language_codes=campaigns_template_df["Language Code"].unique(),
+        table_name="Campaigns",
+    )
+
+    final_df = None
+    # columns are campaign_template_df.columns + columns which start with COPY_ALL_WITH_PREFIX
+    columns = list(campaigns_template_df.columns) + [
+        col
+        for col in new_campaign_df.columns
+        if any(col.startswith(prefix) for prefix in COPY_ALL_WITH_PREFIX)
+    ]
+    for _, new_campaign_row in new_campaign_df.iterrows():
+        for _, template_row in campaigns_template_df[
+            campaigns_template_df["Language Code"] == new_campaign_row["Language Code"]
+        ].iterrows():
+            new_row = template_row.copy()
+            new_row = _copy_all_with_prefixes(new_campaign_row, new_row)
+            include_locations = _get_target_location(new_campaign_row)
+
+            new_row["Campaign Name"] = _update_campaign_name(
+                new_campaign_row,
+                campaign_name=new_row["Campaign Name"],
+                language_code=new_row["Language Code"],
+                include_locations=include_locations,
+            )
+
+            if final_df is None:
+                final_df = pd.DataFrame([new_row], columns=columns)
+            else:
+                final_df = pd.concat(
+                    [final_df, pd.DataFrame([new_row], columns=columns)],
+                    ignore_index=True,
+                )
+
+            final_df["Search Network"] = final_df["Search Network"].astype(bool)
+            final_df["Google Search Network"] = final_df[
+                "Google Search Network"
+            ].astype(bool)
+            final_df["Default max. CPC"] = final_df["Default max. CPC"].astype(float)
+
+    return final_df
 
 
 def process_data_f(
     merged_campaigns_ad_groups_df: pd.DataFrame,
     template_df: pd.DataFrame,
     new_campaign_df: pd.DataFrame,
-    target_resource: Optional[str] = None,
+    target_resource: str,
 ) -> pd.DataFrame:
-    template_df = pd.merge(merged_campaigns_ad_groups_df, template_df, how="cross")
+    merged_campaigns_ad_groups_df["Language Code"] = merged_campaigns_ad_groups_df[
+        "Language Code"
+    ].str.upper()
+    template_df["Language Code"] = template_df["Language Code"].str.upper()
+    new_campaign_df["Language Code"] = new_campaign_df["Language Code"].str.upper()
+    template_df = pd.merge(
+        merged_campaigns_ad_groups_df,
+        template_df,
+        how="inner",
+        on="Language Code",
+    )
+
+    _validate_language_codes(
+        new_campaign_df,
+        valid_language_codes=template_df["Language Code"].unique(),
+        table_name=target_resource,
+    )
+
     final_df = pd.DataFrame(columns=template_df.columns)
-    for _, template_row in template_df.iterrows():
-        for _, new_campaign_row in new_campaign_df.iterrows():
+    for _, new_campaign_row in new_campaign_df.iterrows():
+        for _, template_row in template_df[
+            template_df["Language Code"] == new_campaign_row["Language Code"]
+        ].iterrows():
             stations = [
                 {
                     "Station From": new_campaign_row["Station From"],
@@ -55,18 +201,12 @@ def process_data_f(
 
             for station in stations:
                 new_row = template_row.copy()
-                new_row["Campaign Name"] = new_row["Campaign Name"].replace(
-                    INSERT_COUNTRY, new_campaign_row["Country"]
-                )
-                new_row["Campaign Name"] = new_row["Campaign Name"].replace(
-                    INSERT_STATION_FROM, new_campaign_row["Station From"]
-                )
-                new_row["Campaign Name"] = new_row["Campaign Name"].replace(
-                    INSERT_STATION_TO, new_campaign_row["Station To"]
-                )
-
-                new_row["Ad Group Name"] = new_row["Ad Group Name"].replace(
-                    INSERT_CRITERION_TYPE, new_row["Match Type"]
+                include_locations = _get_target_location(new_campaign_row)
+                new_row["Campaign Name"] = _update_campaign_name(
+                    new_campaign_row,
+                    campaign_name=new_row["Campaign Name"],
+                    language_code=new_row["Language Code"],
+                    include_locations=include_locations,
                 )
 
                 new_row = new_row.str.replace(
@@ -76,6 +216,9 @@ def process_data_f(
                     INSERT_STATION_FROM, station["Station From"]
                 )
                 new_row = new_row.str.replace(INSERT_STATION_TO, station["Station To"])
+                new_row = new_row.str.replace(
+                    INSERT_CRITERION_TYPE, new_row["Match Type"]
+                )
 
                 if target_resource == "ad":
                     new_row["Final URL"] = station["Final Url"]
@@ -93,6 +236,7 @@ def process_data_f(
                     [final_df, pd.DataFrame([new_row])], ignore_index=True
                 )
 
+    final_df = final_df.drop(columns=["Language Code"])
     if target_resource == "keyword":
         final_df = final_df.drop(columns=["Keyword Match Type"])
     final_df = final_df.drop_duplicates(ignore_index=True)
@@ -184,10 +328,9 @@ def _validate_output_data_ad(df: pd.DataFrame) -> pd.DataFrame:  # noqa: C901
 
 
 def validate_output_data(
-    df: pd.DataFrame, target_resource: Literal["ad", "keyword"]
+    df: pd.DataFrame, target_resource: Literal["ad", "campaign" "keyword"]
 ) -> pd.DataFrame:
-    if target_resource == "keyword":
-        # No validation required for keyword data currently
-        return df
-
-    return _validate_output_data_ad(df)
+    if target_resource == "ad":
+        return _validate_output_data_ad(df)
+    # No validation required for campaign and keyword data currently
+    return df

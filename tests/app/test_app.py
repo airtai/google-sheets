@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -7,13 +7,58 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from googleapiclient.errors import HttpError
 
-from google_sheets.app import _check_parameters_are_not_none, app, process_data
+from google_sheets.app import (
+    _check_parameters_are_not_none,
+    _fill_rows_with_none,
+    app,
+    process_campaign_data,
+    process_data,
+)
 from google_sheets.model import GoogleSheetValues
 
 client = TestClient(app)
 
 
 class TestGetSheet:
+    @pytest.mark.parametrize(
+        ("values", "expected"),
+        [
+            (
+                [
+                    ["Campaign", "Ad Group", "Keyword"],
+                    ["Campaign A", "Ad group A", "Keyword A"],
+                    ["Campaign A", "Ad group A", "Keyword B"],
+                    ["Campaign A", "Ad group A", "Keyword C"],
+                ],
+                [
+                    ["Campaign", "Ad Group", "Keyword"],
+                    ["Campaign A", "Ad group A", "Keyword A"],
+                    ["Campaign A", "Ad group A", "Keyword B"],
+                    ["Campaign A", "Ad group A", "Keyword C"],
+                ],
+            ),
+            (
+                [
+                    ["Campaign", "Ad Group", "Keyword"],
+                    ["Campaign A"],
+                    ["Campaign A", "Ad group A"],
+                    ["Campaign A", "Ad group A", "Keyword C"],
+                ],
+                [
+                    ["Campaign", "Ad Group", "Keyword"],
+                    ["Campaign A", None, None],
+                    ["Campaign A", "Ad group A", None],
+                    ["Campaign A", "Ad group A", "Keyword C"],
+                ],
+            ),
+        ],
+    )
+    def test_fill_rows_with_none(
+        self, values: List[List[str]], expected: List[List[Optional[str]]]
+    ) -> None:
+        filled_sheet_values = _fill_rows_with_none(values)
+        assert filled_sheet_values == expected
+
     def test_get_sheet(self) -> None:
         with patch(
             "google_sheets.google_api.service._load_user_credentials",
@@ -166,6 +211,118 @@ class TestGetAllFileNames:
             assert response.json() == expected
 
 
+class TestProcessCampaignData:
+    @pytest.mark.parametrize(
+        ("template_sheet_values", "new_campaign_sheet_values", "detail"),
+        [
+            (
+                GoogleSheetValues(
+                    values=[
+                        ["Campaign Name"],
+                    ]
+                ),
+                GoogleSheetValues(
+                    values=[
+                        ["Country", "Station From", "Station To"],
+                        ["India", "Delhi", "Mumbai"],
+                    ]
+                ),
+                "Both template and new campaign data should have at least two rows",
+            ),
+            (
+                GoogleSheetValues(
+                    values=[
+                        ["Fake column"],
+                        ["fake"],
+                    ]
+                ),
+                GoogleSheetValues(
+                    values=[
+                        ["Country", "Station From", "Station To"],
+                        ["India", "Delhi", "Mumbai"],
+                    ]
+                ),
+                "Mandatory columns missing in the campaign template data.",
+            ),
+            (
+                GoogleSheetValues(
+                    values=[
+                        [
+                            "Campaign Name",
+                            "Language Code",
+                            "Campaign Budget",
+                            "Search Network",
+                            "Google Search Network",
+                            "Default max. CPC",
+                        ],
+                        [
+                            "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO}",
+                            "EN",
+                            100,
+                            True,
+                            False,
+                            1.2,
+                        ],
+                    ]
+                ),
+                GoogleSheetValues(
+                    values=[
+                        [
+                            "Country",
+                            "Station From",
+                            "Station To",
+                            "Final Url From",
+                            "Final Url To",
+                            "Language Code",
+                        ],
+                        [
+                            "India",
+                            "Delhi",
+                            "Mumbai",
+                            "https://www.example.com/from",
+                            "https://www.example.com/to",
+                            "EN",
+                        ],
+                    ]
+                ),
+                GoogleSheetValues(
+                    values=[
+                        [
+                            "Campaign Name",
+                            "Language Code",
+                            "Campaign Budget",
+                            "Search Network",
+                            "Google Search Network",
+                            "Default max. CPC",
+                        ],
+                        ["India - Delhi - Mumbai", "EN", 100, True, False, 1.2],
+                    ],
+                ),
+            ),
+        ],
+    )
+    @pytest.mark.asyncio()
+    async def test_process_campaign_data(
+        self,
+        template_sheet_values: GoogleSheetValues,
+        new_campaign_sheet_values: GoogleSheetValues,
+        detail: Union[str, GoogleSheetValues],
+    ) -> None:
+        if isinstance(detail, GoogleSheetValues):
+            processed_data = await process_campaign_data(
+                template_sheet_values=template_sheet_values,
+                new_campaign_sheet_values=new_campaign_sheet_values,
+            )
+            assert processed_data.model_dump() == detail.model_dump()
+        else:
+            with pytest.raises(HTTPException) as exc:
+                await process_campaign_data(
+                    template_sheet_values=template_sheet_values,
+                    new_campaign_sheet_values=new_campaign_sheet_values,
+                )
+            assert detail in exc.value.detail
+
+
 class TestProcessData:
     @pytest.mark.parametrize(
         ("template_sheet_values", "new_campaign_sheet_values", "detail"),
@@ -211,6 +368,7 @@ class TestProcessData:
                             "Station To",
                             "Final Url From",
                             "Final Url To",
+                            "Language Code",
                         ],
                         [
                             "India",
@@ -218,6 +376,7 @@ class TestProcessData:
                             "Mumbai",
                             "https://www.example.com/from",
                             "https://www.example.com/to",
+                            "EN",
                         ],
                     ]
                 ),
@@ -231,9 +390,10 @@ class TestProcessData:
                             "Keyword Match Type",
                             "Level",
                             "Negative",
+                            "Language Code",
                         ],
-                        ["Keyword A", "Exact", None, "False"],
-                        ["Keyword N", "Broad", "Campaign", "True"],
+                        ["Keyword A", "Exact", None, "False", "EN"],
+                        ["Keyword N", "Broad", "Campaign", "True", "EN"],
                     ]
                 ),
                 GoogleSheetValues(
@@ -244,6 +404,7 @@ class TestProcessData:
                             "Station To",
                             "Final Url From",
                             "Final Url To",
+                            "Language Code",
                         ],
                         [
                             "India",
@@ -251,6 +412,7 @@ class TestProcessData:
                             "Mumbai",
                             "https://www.example.com/from",
                             "https://www.example.com/to",
+                            "EN",
                         ],
                     ]
                 ),
@@ -265,7 +427,7 @@ class TestProcessData:
                             "Negative",
                         ],
                         [
-                            "India - Delhi - Mumbai",
+                            "India - Delhi - Mumbai - EN",
                             "Delhi - Mumbai",
                             "Exact",
                             "Keyword A",
@@ -273,7 +435,7 @@ class TestProcessData:
                             "False",
                         ],
                         [
-                            "India - Delhi - Mumbai",
+                            "India - Delhi - Mumbai - EN",
                             "Mumbai - Delhi",
                             "Exact",
                             "Keyword A",
@@ -281,7 +443,7 @@ class TestProcessData:
                             "False",
                         ],
                         [
-                            "India - Delhi - Mumbai",
+                            "India - Delhi - Mumbai - EN",
                             None,
                             "Broad",
                             "Keyword N",
@@ -303,9 +465,10 @@ class TestProcessData:
         merged_campaigns_ad_groups_df = pd.DataFrame(
             {
                 "Campaign Name": [
-                    "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO"
+                    "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_LANGUAGE_CODE}"
                 ],
-                "Ad Group Name": ["INSERT_STATION_FROM - INSERT_STATION_TO"],
+                "Language Code": ["EN"],
+                "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                 "Match Type": ["Exact"],
             }
         )
@@ -333,6 +496,7 @@ class TestProcessData:
         template_sheet_values = GoogleSheetValues(
             values=[
                 [
+                    "Language Code",
                     "Final URL",
                     "Headline 1",
                     "Headline 2",
@@ -343,6 +507,7 @@ class TestProcessData:
                     "Path 2",
                 ],
                 [
+                    "EN",
                     "https://www.example.com/from",
                     "H" * 31,
                     "Headline 2",
@@ -362,6 +527,7 @@ class TestProcessData:
                     "Station To",
                     "Final Url From",
                     "Final Url To",
+                    "Language Code",
                 ],
                 [
                     "India",
@@ -369,15 +535,17 @@ class TestProcessData:
                     "Mumbai",
                     "https://www.example.com/from",
                     "https://www.example.com/to",
+                    "EN",
                 ],
             ]
         )
         merged_campaigns_ad_groups_df = pd.DataFrame(
             {
                 "Campaign Name": [
-                    "INSERT_COUNTRY - INSERT_STATION_FROM - INSERT_STATION_TO"
+                    "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_LANGUAGE_CODE}"
                 ],
-                "Ad Group Name": ["INSERT_STATION_FROM - INSERT_STATION_TO"],
+                "Language Code": ["EN"],
+                "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                 "Match Type": ["Exact"],
             }
         )
@@ -406,7 +574,7 @@ class TestProcessData:
                 ],
                 [
                     "Headline length should be less than 30 characters, found 31 in column Headline 1.\n",
-                    "India - Delhi - Mumbai",
+                    "India - Delhi - Mumbai - EN",
                     "Delhi - Mumbai",
                     "Exact",
                     "https://www.example.com/from",
@@ -420,7 +588,7 @@ class TestProcessData:
                 ],
                 [
                     "Headline length should be less than 30 characters, found 31 in column Headline 1.\n",
-                    "India - Delhi - Mumbai",
+                    "India - Delhi - Mumbai - EN",
                     "Mumbai - Delhi",
                     "Exact",
                     "https://www.example.com/to",
