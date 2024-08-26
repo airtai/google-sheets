@@ -46,7 +46,7 @@ dynamic = ["version"]
 dependencies = [
     "pydantic>=2.3,<3",
     "fastapi>=0.110.2",
-    "prisma==0.13.1",
+    "prisma==0.15.0",
     "google-api-python-client==2.140.0",
     "asyncify==0.10.0",
     "pandas==2.2.2"
