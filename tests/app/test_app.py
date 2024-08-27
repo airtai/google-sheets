@@ -301,7 +301,7 @@ class TestProcessCampaignData:
             ),
         ],
     )
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_process_campaign_data(
         self,
         template_sheet_values: GoogleSheetValues,
@@ -455,7 +455,7 @@ class TestProcessData:
             ),
         ],
     )
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_process_data_keywords(
         self,
         template_sheet_values: GoogleSheetValues,
@@ -491,7 +491,7 @@ class TestProcessData:
                 )
             assert detail in exc.value.detail
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_process_data_ads(self) -> None:
         template_sheet_values = GoogleSheetValues(
             values=[
