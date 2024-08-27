@@ -56,7 +56,7 @@ dependencies = [
 # public distributions
 
 server = [
-    "uvicorn==0.30.3",
+    "uvicorn==0.30.6",
 ]
 
 # dev dependencies
@@ -67,7 +67,7 @@ lint = [
     "types-Pygments",
     "types-docutils",
     "mypy==1.11.0",
-    "ruff==0.5.4",
+    "ruff==0.6.2",
     "pyupgrade-directories==0.3.0",
     "bandit==1.7.9",
     "semgrep==1.85.0",
@@ -75,9 +75,9 @@ lint = [
 ]
 
 test-core = [
-    "coverage[toml]==7.6.0",
+    "coverage[toml]==7.6.1",
     "pytest==8.3.2",
-    "pytest-asyncio==0.23.8",
+    "pytest-asyncio==0.24.0",
 ]
 
 testing = [
@@ -200,6 +200,7 @@ markers = [
     "slow",
     "all",
 ]
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.run]
 parallel = true
