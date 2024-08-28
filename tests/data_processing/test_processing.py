@@ -353,6 +353,8 @@ def test_process_data_f(
                     "Include Location 2": "Croatia",
                     "Include Language 1": "English",
                     "Exclude Language 1": "German",
+                    "Sitelink Asset ID 1": "111",
+                    "Sitelink Asset ID 2": "222",
                 }
             ),
             pd.Series(
@@ -370,6 +372,8 @@ def test_process_data_f(
                     "Include Location 2": "Croatia",
                     "Include Language 1": "English",
                     "Exclude Language 1": "German",
+                    "Sitelink Asset ID 1": "111",
+                    "Sitelink Asset ID 2": "222",
                 }
             ),
         ),

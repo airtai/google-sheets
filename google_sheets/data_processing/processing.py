@@ -71,6 +71,7 @@ COPY_ALL_WITH_PREFIX = [
     "Include Location",
     "Include Language",
     "Exclude Language",
+    "Sitelink",
 ]
 
 
