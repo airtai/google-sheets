@@ -71,6 +71,7 @@ COPY_ALL_WITH_PREFIX = [
     "Include Location",
     "Include Language",
     "Exclude Language",
+    "Sitelink",
 ]
 
 
@@ -229,7 +230,7 @@ def process_data_f(
                 ):
                     new_row["Match Type"] = new_row["Keyword Match Type"]
 
-                    if new_row["Level"] == "Campaign":
+                    if "Campaign" in new_row["Level"]:
                         new_row["Ad Group Name"] = None
 
                 final_df = pd.concat(

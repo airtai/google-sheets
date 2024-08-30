@@ -267,6 +267,57 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
                 }
             ),
         ),
+        (
+            pd.DataFrame(
+                {
+                    "Campaign Name": [
+                        "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_LANGUAGE_CODE}",
+                        "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_LANGUAGE_CODE}",
+                    ],
+                    "Language Code": ["EN", "DE"],
+                    "Ad Group Name": [
+                        "{INSERT_STATION_FROM} - {INSERT_STATION_TO}",
+                        "{INSERT_STATION_FROM} - {INSERT_STATION_TO}",
+                    ],
+                    "Match Type": ["Exact", "Exact"],
+                }
+            ),
+            pd.DataFrame(
+                {
+                    "Keyword": ["k1", "k2"],
+                    "Max CPC": ["", ""],
+                    "Language Code": ["EN", "DE"],
+                    "Negative": ["TRUE", "TRUE"],
+                    "Level": ["Campaign", "Campaign List"],
+                    "Keyword Match Type": ["Exact", "Exact"],
+                }
+            ),
+            pd.DataFrame(
+                {
+                    "Country": ["USA", "USA"],
+                    "Station From": ["A", "B"],
+                    "Station To": ["C", "D"],
+                    "Language Code": ["EN", "DE"],
+                }
+            ),
+            pd.DataFrame(
+                {
+                    "Campaign Name": [
+                        "USA - A - C - EN",
+                        "USA - B - D - DE",
+                    ],
+                    "Ad Group Name": [
+                        None,
+                        None,
+                    ],
+                    "Match Type": ["Exact", "Exact"],
+                    "Keyword": ["k1", "k2"],
+                    "Max CPC": ["", ""],
+                    "Negative": ["TRUE", "TRUE"],
+                    "Level": ["Campaign", "Campaign List"],
+                }
+            ),
+        ),
     ],
 )
 def test_process_data_f(
@@ -302,6 +353,8 @@ def test_process_data_f(
                     "Include Location 2": "Croatia",
                     "Include Language 1": "English",
                     "Exclude Language 1": "German",
+                    "Sitelink Asset ID 1": "111",
+                    "Sitelink Asset ID 2": "222",
                 }
             ),
             pd.Series(
@@ -319,6 +372,8 @@ def test_process_data_f(
                     "Include Location 2": "Croatia",
                     "Include Language 1": "English",
                     "Exclude Language 1": "German",
+                    "Sitelink Asset ID 1": "111",
+                    "Sitelink Asset ID 2": "222",
                 }
             ),
         ),
