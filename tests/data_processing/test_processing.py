@@ -83,11 +83,18 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
             ),
             False,
         ),
+        (
+            pd.Series(
+                {
+                    "Category": "",
+                }
+            ),
+            True,
+        ),
     ],
 )
 def test_use_template_row(template_row: pd.Series, expected: bool) -> None:
-    category_values = ["Bus"]
-    assert _use_template_row(category_values, template_row) == expected
+    assert _use_template_row("Bus", template_row) == expected
 
 
 @pytest.mark.parametrize(
@@ -121,7 +128,7 @@ def test_use_template_row(template_row: pd.Series, expected: bool) -> None:
                     "Station From": ["A", "B"],
                     "Station To": ["C", "D"],
                     "Language Code": ["EN", "EN"],
-                    "Category 1": ["Bus", "Bus"],
+                    "Category": ["Bus", "Bus"],
                 }
             ),
             pd.DataFrame(
@@ -200,7 +207,7 @@ def test_use_template_row(template_row: pd.Series, expected: bool) -> None:
                     "Station From": ["A", "B"],
                     "Station To": ["C", "D"],
                     "Language Code": ["EN", "EN"],
-                    "Category 1": ["Bus", "Bus"],
+                    "Category": ["Bus", "Bus"],
                 }
             ),
             pd.DataFrame(
@@ -283,8 +290,7 @@ def test_use_template_row(template_row: pd.Series, expected: bool) -> None:
                     "Station From": ["A", "B"],
                     "Station To": ["C", "D"],
                     "Language Code": ["EN", "DE"],
-                    "Category 1": ["Bus", "Bus"],
-                    "Category 2": ["Ferry", "Ferry"],
+                    "Category": ["Bus", "Bus"],
                 }
             ),
             pd.DataFrame(
@@ -341,7 +347,7 @@ def test_use_template_row(template_row: pd.Series, expected: bool) -> None:
                     "Station From": ["A", "B"],
                     "Station To": ["C", "D"],
                     "Language Code": ["EN", "DE"],
-                    "Category 1": ["Bus", "Bus"],
+                    "Category": ["Bus", "Bus"],
                 }
             ),
             pd.DataFrame(
@@ -437,7 +443,7 @@ def test_copy_all_with_prefixes(
             pd.DataFrame(
                 {
                     "Campaign Name": [
-                        "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_LANGUAGE_CODE}"
+                        "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_LANGUAGE_CODE} | {INSERT_CATEGORY}"
                     ],
                     "Language Code": ["EN"],
                     "Campaign Budget": ["100"],
@@ -452,13 +458,14 @@ def test_copy_all_with_prefixes(
                     "Station From": ["A", "B"],
                     "Station To": ["C", "D"],
                     "Language Code": ["EN", "EN"],
+                    "Category": ["Bus", "Bus"],
                 }
             ),
             pd.DataFrame(
                 {
                     "Campaign Name": [
-                        "USA - A - C - EN",
-                        "USA - B - D - EN",
+                        "USA - A - C - EN | Bus",
+                        "USA - B - D - EN | Bus",
                     ],
                     "Language Code": ["EN", "EN"],
                     "Campaign Budget": ["100", "100"],
@@ -583,6 +590,8 @@ def test_get_target_location(new_campaign_row: pd.Series, expected: str) -> None
                     "Country": "USA",
                     "Station From": "A",
                     "Station To": "B",
+                    "Language Code": "EN",
+                    "Category": "Bus",
                 }
             ),
             "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_TARGET_LOCATION}",

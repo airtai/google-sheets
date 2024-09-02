@@ -32,6 +32,7 @@ INSERT_STATION_TO = "{INSERT_STATION_TO}"
 INSERT_COUNTRY = "{INSERT_COUNTRY}"
 INSERT_CRITERION_TYPE = "{INSERT_CRITERION_TYPE}"
 INSERT_LANGUAGE_CODE = "{INSERT_LANGUAGE_CODE}"
+INSERT_CATEGORY = "{INSERT_CATEGORY}"
 
 
 def _update_campaign_name(
@@ -44,6 +45,7 @@ def _update_campaign_name(
         INSERT_COUNTRY=new_campaign_row["Country"],
         INSERT_STATION_FROM=new_campaign_row["Station From"],
         INSERT_STATION_TO=new_campaign_row["Station To"],
+        INSERT_CATEGORY=new_campaign_row["Category"],
         INSERT_LANGUAGE_CODE=language_code,
         INSERT_TARGET_LOCATION=include_locations,
     )
@@ -156,11 +158,11 @@ def process_campaign_data_f(
     return final_df
 
 
-def _use_template_row(category_values: List[Any], template_row: pd.Series) -> bool:
-    if template_row["Category"] is None:
+def _use_template_row(category: Any, template_row: pd.Series) -> bool:
+    if not template_row["Category"]:
         return True
 
-    return not (category_values and template_row["Category"] not in category_values)
+    return template_row["Category"] == category  # type: ignore[no-any-return]
 
 
 def _process_row(
@@ -169,13 +171,7 @@ def _process_row(
     final_df: pd.DataFrame,
     target_resource: str,
 ) -> pd.DataFrame:
-    category_columns = [
-        col for col in new_campaign_row.index if col.startswith("Category")
-    ]
-    category_values = [
-        new_campaign_row[col] for col in category_columns if new_campaign_row[col]
-    ]
-    if not _use_template_row(category_values, template_row):
+    if not _use_template_row(new_campaign_row["Category"], template_row):
         return final_df
 
     stations = [
@@ -207,6 +203,7 @@ def _process_row(
         new_row = new_row.str.replace(INSERT_STATION_FROM, station["Station From"])
         new_row = new_row.str.replace(INSERT_STATION_TO, station["Station To"])
         new_row = new_row.str.replace(INSERT_CRITERION_TYPE, new_row["Match Type"])
+        new_row = new_row.str.replace(INSERT_CATEGORY, new_campaign_row["Category"])
 
         if target_resource == "ad":
             new_row["Final URL"] = station["Final Url"]
