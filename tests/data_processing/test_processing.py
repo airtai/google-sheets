@@ -7,6 +7,7 @@ from google_sheets.data_processing.processing import (
     _copy_all_with_prefixes,
     _get_target_location,
     _update_campaign_name,
+    _use_template_row,
     _validate_language_codes,
     process_campaign_data_f,
     process_data_f,
@@ -56,6 +57,47 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
 
 
 @pytest.mark.parametrize(
+    ("template_row", "expected"),
+    [
+        (
+            pd.Series(
+                {
+                    "Category": "Bus",
+                }
+            ),
+            True,
+        ),
+        (
+            pd.Series(
+                {
+                    "Category": None,
+                }
+            ),
+            True,
+        ),
+        (
+            pd.Series(
+                {
+                    "Category": "Ferry",
+                }
+            ),
+            False,
+        ),
+        (
+            pd.Series(
+                {
+                    "Category": "",
+                }
+            ),
+            True,
+        ),
+    ],
+)
+def test_use_template_row(template_row: pd.Series, expected: bool) -> None:
+    assert _use_template_row("Bus", template_row) == expected
+
+
+@pytest.mark.parametrize(
     ("merged_campaigns_ad_groups_df", "template_df", "new_campaign_df", "expected"),
     [
         (
@@ -77,6 +119,7 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
                     "Negative": ["FALSE", "FALSE"],
                     "Level": [None, None],
                     "Keyword Match Type": ["Exact", "Exact"],
+                    "Category": ["Bus", "Bus"],
                 }
             ),
             pd.DataFrame(
@@ -85,6 +128,7 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
                     "Station From": ["A", "B"],
                     "Station To": ["C", "D"],
                     "Language Code": ["EN", "EN"],
+                    "Category": ["Bus", "Bus"],
                 }
             ),
             pd.DataFrame(
@@ -154,6 +198,7 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
                     "Negative": ["FALSE", "FALSE"],
                     "Level": [None, None],
                     "Keyword Match Type": ["Exact", "Exact"],
+                    "Category": ["Bus", "Bus"],
                 }
             ),
             pd.DataFrame(
@@ -162,6 +207,7 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
                     "Station From": ["A", "B"],
                     "Station To": ["C", "D"],
                     "Language Code": ["EN", "EN"],
+                    "Category": ["Bus", "Bus"],
                 }
             ),
             pd.DataFrame(
@@ -235,6 +281,7 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
                     "Negative": ["FALSE", "FALSE"],
                     "Level": [None, None],
                     "Keyword Match Type": ["Exact", "Exact"],
+                    "Category": ["Bus", "Bus"],
                 }
             ),
             pd.DataFrame(
@@ -243,6 +290,7 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
                     "Station From": ["A", "B"],
                     "Station To": ["C", "D"],
                     "Language Code": ["EN", "DE"],
+                    "Category": ["Bus", "Bus"],
                 }
             ),
             pd.DataFrame(
@@ -290,6 +338,7 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
                     "Negative": ["TRUE", "TRUE"],
                     "Level": ["Campaign", "Campaign List"],
                     "Keyword Match Type": ["Exact", "Exact"],
+                    "Category": ["Bus", "Bus"],
                 }
             ),
             pd.DataFrame(
@@ -298,6 +347,7 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
                     "Station From": ["A", "B"],
                     "Station To": ["C", "D"],
                     "Language Code": ["EN", "DE"],
+                    "Category": ["Bus", "Bus"],
                 }
             ),
             pd.DataFrame(
@@ -393,7 +443,7 @@ def test_copy_all_with_prefixes(
             pd.DataFrame(
                 {
                     "Campaign Name": [
-                        "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_LANGUAGE_CODE}"
+                        "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_LANGUAGE_CODE} | {INSERT_CATEGORY}"
                     ],
                     "Language Code": ["EN"],
                     "Campaign Budget": ["100"],
@@ -408,13 +458,14 @@ def test_copy_all_with_prefixes(
                     "Station From": ["A", "B"],
                     "Station To": ["C", "D"],
                     "Language Code": ["EN", "EN"],
+                    "Category": ["Bus", "Bus"],
                 }
             ),
             pd.DataFrame(
                 {
                     "Campaign Name": [
-                        "USA - A - C - EN",
-                        "USA - B - D - EN",
+                        "USA - A - C - EN | Bus",
+                        "USA - B - D - EN | Bus",
                     ],
                     "Language Code": ["EN", "EN"],
                     "Campaign Budget": ["100", "100"],
@@ -539,6 +590,8 @@ def test_get_target_location(new_campaign_row: pd.Series, expected: str) -> None
                     "Country": "USA",
                     "Station From": "A",
                     "Station To": "B",
+                    "Language Code": "EN",
+                    "Category": "Bus",
                 }
             ),
             "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} - {INSERT_TARGET_LOCATION}",

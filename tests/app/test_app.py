@@ -256,7 +256,7 @@ class TestProcessCampaignData:
                             "Default max. CPC",
                         ],
                         [
-                            "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO}",
+                            "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO} | {INSERT_CATEGORY}",
                             "EN",
                             100,
                             True,
@@ -274,6 +274,7 @@ class TestProcessCampaignData:
                             "Final Url From",
                             "Final Url To",
                             "Language Code",
+                            "Category",
                         ],
                         [
                             "India",
@@ -282,6 +283,7 @@ class TestProcessCampaignData:
                             "https://www.example.com/from",
                             "https://www.example.com/to",
                             "EN",
+                            "Bus",
                         ],
                     ]
                 ),
@@ -295,7 +297,7 @@ class TestProcessCampaignData:
                             "Google Search Network",
                             "Default max. CPC",
                         ],
-                        ["India - Delhi - Mumbai", "EN", 100, True, False, 1.2],
+                        ["India - Delhi - Mumbai | Bus", "EN", 100, True, False, 1.2],
                     ],
                 ),
             ),
@@ -391,9 +393,10 @@ class TestProcessData:
                             "Level",
                             "Negative",
                             "Language Code",
+                            "Category",
                         ],
-                        ["Keyword A", "Exact", None, "False", "EN"],
-                        ["Keyword N", "Broad", "Campaign", "True", "EN"],
+                        ["Keyword A", "Exact", None, "False", "EN", "Bus"],
+                        ["Keyword N", "Broad", "Campaign", "True", "EN", "Bus"],
                     ]
                 ),
                 GoogleSheetValues(
@@ -405,6 +408,7 @@ class TestProcessData:
                             "Final Url From",
                             "Final Url To",
                             "Language Code",
+                            "Category",
                         ],
                         [
                             "India",
@@ -413,6 +417,7 @@ class TestProcessData:
                             "https://www.example.com/from",
                             "https://www.example.com/to",
                             "EN",
+                            "Bus",
                         ],
                     ]
                 ),
@@ -497,6 +502,7 @@ class TestProcessData:
             values=[
                 [
                     "Language Code",
+                    "Category",
                     "Final URL",
                     "Headline 1",
                     "Headline 2",
@@ -508,6 +514,7 @@ class TestProcessData:
                 ],
                 [
                     "EN",
+                    "Bus",
                     "https://www.example.com/from",
                     "H" * 31,
                     "Headline 2",
@@ -528,6 +535,7 @@ class TestProcessData:
                     "Final Url From",
                     "Final Url To",
                     "Language Code",
+                    "Category",
                 ],
                 [
                     "India",
@@ -536,6 +544,7 @@ class TestProcessData:
                     "https://www.example.com/from",
                     "https://www.example.com/to",
                     "EN",
+                    "Bus",
                 ],
             ]
         )
