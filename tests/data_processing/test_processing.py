@@ -86,12 +86,8 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
     ],
 )
 def test_use_template_row(template_row: pd.Series, expected: bool) -> None:
-    new_campaign_row = pd.Series(
-        {
-            "Category 1": "Bus",
-        }
-    )
-    assert _use_template_row(new_campaign_row, template_row) == expected
+    category_values = ["Bus"]
+    assert _use_template_row(category_values, template_row) == expected
 
 
 @pytest.mark.parametrize(

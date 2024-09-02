@@ -1,4 +1,4 @@
-from typing import List, Literal
+from typing import Any, List, Literal
 
 import pandas as pd
 
@@ -156,18 +156,73 @@ def process_campaign_data_f(
     return final_df
 
 
-def _use_template_row(new_campaign_row: pd.Series, template_row: pd.Series) -> bool:
+def _use_template_row(category_values: List[Any], template_row: pd.Series) -> bool:
     if template_row["Category"] is None:
         return True
 
+    return not (category_values and template_row["Category"] not in category_values)
+
+
+def _process_row(
+    new_campaign_row: pd.Series,
+    template_row: pd.Series,
+    final_df: pd.DataFrame,
+    target_resource: str,
+) -> pd.DataFrame:
     category_columns = [
         col for col in new_campaign_row.index if col.startswith("Category")
     ]
     category_values = [
         new_campaign_row[col] for col in category_columns if new_campaign_row[col]
     ]
+    if not _use_template_row(category_values, template_row):
+        return final_df
 
-    return not (category_values and template_row["Category"] not in category_values)
+    stations = [
+        {
+            "Station From": new_campaign_row["Station From"],
+            "Station To": new_campaign_row["Station To"],
+        },
+        # Reverse the order of the stations
+        {
+            "Station From": new_campaign_row["Station To"],
+            "Station To": new_campaign_row["Station From"],
+        },
+    ]
+    if target_resource == "ad":
+        stations[0]["Final Url"] = new_campaign_row["Final Url From"]
+        stations[1]["Final Url"] = new_campaign_row["Final Url To"]
+
+    for station in stations:
+        new_row = template_row.copy()
+        include_locations = _get_target_location(new_campaign_row)
+        new_row["Campaign Name"] = _update_campaign_name(
+            new_campaign_row,
+            campaign_name=new_row["Campaign Name"],
+            language_code=new_row["Language Code"],
+            include_locations=include_locations,
+        )
+
+        new_row = new_row.str.replace(INSERT_COUNTRY, new_campaign_row["Country"])
+        new_row = new_row.str.replace(INSERT_STATION_FROM, station["Station From"])
+        new_row = new_row.str.replace(INSERT_STATION_TO, station["Station To"])
+        new_row = new_row.str.replace(INSERT_CRITERION_TYPE, new_row["Match Type"])
+
+        if target_resource == "ad":
+            new_row["Final URL"] = station["Final Url"]
+        elif (
+            target_resource == "keyword"
+            and new_row["Negative"]
+            and new_row["Negative"].lower() == "true"
+        ):
+            new_row["Match Type"] = new_row["Keyword Match Type"]
+
+            if "Campaign" in new_row["Level"]:
+                new_row["Ad Group Name"] = None
+
+        final_df = pd.concat([final_df, pd.DataFrame([new_row])], ignore_index=True)
+
+    return final_df
 
 
 def process_data_f(
@@ -199,59 +254,9 @@ def process_data_f(
         for _, template_row in template_df[
             template_df["Language Code"] == new_campaign_row["Language Code"]
         ].iterrows():
-            if not _use_template_row(new_campaign_row, template_row):
-                continue
-            stations = [
-                {
-                    "Station From": new_campaign_row["Station From"],
-                    "Station To": new_campaign_row["Station To"],
-                },
-                # Reverse the order of the stations
-                {
-                    "Station From": new_campaign_row["Station To"],
-                    "Station To": new_campaign_row["Station From"],
-                },
-            ]
-            if target_resource == "ad":
-                stations[0]["Final Url"] = new_campaign_row["Final Url From"]
-                stations[1]["Final Url"] = new_campaign_row["Final Url To"]
-
-            for station in stations:
-                new_row = template_row.copy()
-                include_locations = _get_target_location(new_campaign_row)
-                new_row["Campaign Name"] = _update_campaign_name(
-                    new_campaign_row,
-                    campaign_name=new_row["Campaign Name"],
-                    language_code=new_row["Language Code"],
-                    include_locations=include_locations,
-                )
-
-                new_row = new_row.str.replace(
-                    INSERT_COUNTRY, new_campaign_row["Country"]
-                )
-                new_row = new_row.str.replace(
-                    INSERT_STATION_FROM, station["Station From"]
-                )
-                new_row = new_row.str.replace(INSERT_STATION_TO, station["Station To"])
-                new_row = new_row.str.replace(
-                    INSERT_CRITERION_TYPE, new_row["Match Type"]
-                )
-
-                if target_resource == "ad":
-                    new_row["Final URL"] = station["Final Url"]
-                elif (
-                    target_resource == "keyword"
-                    and new_row["Negative"]
-                    and new_row["Negative"].lower() == "true"
-                ):
-                    new_row["Match Type"] = new_row["Keyword Match Type"]
-
-                    if "Campaign" in new_row["Level"]:
-                        new_row["Ad Group Name"] = None
-
-                final_df = pd.concat(
-                    [final_df, pd.DataFrame([new_row])], ignore_index=True
-                )
+            final_df = _process_row(
+                new_campaign_row, template_row, final_df, target_resource
+            )
 
     final_df = final_df.drop(columns=["Language Code", "Category"])
     if target_resource == "keyword":
