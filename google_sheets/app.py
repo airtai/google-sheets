@@ -330,6 +330,7 @@ NEW_CAMPAIGN_MANDATORY_COLUMNS = [
     "Final Url From",
     "Final Url To",
     "Language Code",
+    "Category",
 ]
 
 MANDATORY_CAMPAIGN_TEMPLATE_COLUMNS = [
