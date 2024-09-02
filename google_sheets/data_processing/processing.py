@@ -156,6 +156,20 @@ def process_campaign_data_f(
     return final_df
 
 
+def _use_template_row(new_campaign_row: pd.Series, template_row: pd.Series) -> bool:
+    if template_row["Category"] is None:
+        return True
+
+    category_columns = [
+        col for col in new_campaign_row.index if col.startswith("Category")
+    ]
+    category_values = [
+        new_campaign_row[col] for col in category_columns if new_campaign_row[col]
+    ]
+
+    return not (category_values and template_row["Category"] not in category_values)
+
+
 def process_data_f(
     merged_campaigns_ad_groups_df: pd.DataFrame,
     template_df: pd.DataFrame,
@@ -185,6 +199,8 @@ def process_data_f(
         for _, template_row in template_df[
             template_df["Language Code"] == new_campaign_row["Language Code"]
         ].iterrows():
+            if not _use_template_row(new_campaign_row, template_row):
+                continue
             stations = [
                 {
                     "Station From": new_campaign_row["Station From"],
@@ -237,7 +253,7 @@ def process_data_f(
                     [final_df, pd.DataFrame([new_row])], ignore_index=True
                 )
 
-    final_df = final_df.drop(columns=["Language Code"])
+    final_df = final_df.drop(columns=["Language Code", "Category"])
     if target_resource == "keyword":
         final_df = final_df.drop(columns=["Keyword Match Type"])
     final_df = final_df.drop_duplicates(ignore_index=True)

@@ -391,9 +391,10 @@ class TestProcessData:
                             "Level",
                             "Negative",
                             "Language Code",
+                            "Category",
                         ],
-                        ["Keyword A", "Exact", None, "False", "EN"],
-                        ["Keyword N", "Broad", "Campaign", "True", "EN"],
+                        ["Keyword A", "Exact", None, "False", "EN", "Bus"],
+                        ["Keyword N", "Broad", "Campaign", "True", "EN", "Bus"],
                     ]
                 ),
                 GoogleSheetValues(
@@ -405,6 +406,7 @@ class TestProcessData:
                             "Final Url From",
                             "Final Url To",
                             "Language Code",
+                            "Category 1",
                         ],
                         [
                             "India",
@@ -413,6 +415,7 @@ class TestProcessData:
                             "https://www.example.com/from",
                             "https://www.example.com/to",
                             "EN",
+                            "Bus",
                         ],
                     ]
                 ),
@@ -497,6 +500,7 @@ class TestProcessData:
             values=[
                 [
                     "Language Code",
+                    "Category",
                     "Final URL",
                     "Headline 1",
                     "Headline 2",
@@ -508,6 +512,7 @@ class TestProcessData:
                 ],
                 [
                     "EN",
+                    "Bus",
                     "https://www.example.com/from",
                     "H" * 31,
                     "Headline 2",
@@ -528,6 +533,8 @@ class TestProcessData:
                     "Final Url From",
                     "Final Url To",
                     "Language Code",
+                    "Category 1",
+                    "Category 2",
                 ],
                 [
                     "India",
@@ -536,6 +543,8 @@ class TestProcessData:
                     "https://www.example.com/from",
                     "https://www.example.com/to",
                     "EN",
+                    "Bus",
+                    "Ferry",
                 ],
             ]
         )
