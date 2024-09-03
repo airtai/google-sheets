@@ -285,10 +285,13 @@ def _validate_output_data_ad(df: pd.DataFrame) -> pd.DataFrame:  # noqa: C901
     description_columns = [col for col in df.columns if "Description" in col]
 
     for index, row in df.iterrows():
-        # Check for duplicate headlines and descriptions
-        if len(set(row[headline_columns])) != len(row[headline_columns]):
+        headlines = [headline for headline in row[headline_columns] if headline]
+        descriptions = [
+            description for description in row[description_columns] if description
+        ]
+        if len(set(headlines)) != len(headlines):
             df.loc[index, "Issues"] += "Duplicate headlines found.\n"
-        if len(set(row[description_columns])) != len(row[description_columns]):
+        if len(set(descriptions)) != len(descriptions):
             df.loc[index, "Issues"] += "Duplicate descriptions found.\n"
 
         # Check for the number of headlines and descriptions
