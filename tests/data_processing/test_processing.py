@@ -515,6 +515,8 @@ def test_process_campaign_data_f(
                     "Headline 1": ["H1", "H1", "H1", "H1"],
                     "Headline 2": ["H2", "H2", "H2", "H2"],
                     "Headline 3": ["H3", "H3", "H3", "H3"],
+                    "Headline 4": ["", "", "", ""],
+                    "Headline 5": ["", "", "", ""],
                     "Description 1": ["D1", "D1", "D1", "D1"],
                     "Description 2": ["D2", "D2", "D2", "D2"],
                     "Path 1": ["P1", "P1", "P1", "P1"],
