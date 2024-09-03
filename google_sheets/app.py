@@ -330,6 +330,7 @@ NEW_CAMPAIGN_MANDATORY_COLUMNS = [
     "Final Url From",
     "Final Url To",
     "Language Code",
+    "Category",
 ]
 
 MANDATORY_CAMPAIGN_TEMPLATE_COLUMNS = [
@@ -343,6 +344,7 @@ MANDATORY_CAMPAIGN_TEMPLATE_COLUMNS = [
 
 MANDATORY_AD_TEMPLATE_COLUMNS = [
     "Language Code",
+    "Category",
     "Headline 1",
     "Headline 2",
     "Headline 3",
@@ -352,6 +354,7 @@ MANDATORY_AD_TEMPLATE_COLUMNS = [
 
 MANDATORY_KEYWORD_TEMPLATE_COLUMNS = [
     "Language Code",
+    "Category",
     "Keyword",
     "Keyword Match Type",
     "Level",
