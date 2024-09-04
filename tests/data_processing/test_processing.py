@@ -6,6 +6,7 @@ import pytest
 from google_sheets.data_processing.processing import (
     _copy_all_with_prefixes,
     _get_target_location,
+    _process_row,
     _update_campaign_name,
     _use_template_row,
     _validate_language_codes,
@@ -62,7 +63,7 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
         (
             pd.Series(
                 {
-                    "Category": "Bus",
+                    "Category": "bus",
                 }
             ),
             True,
@@ -78,7 +79,7 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
         (
             pd.Series(
                 {
-                    "Category": "Ferry",
+                    "Category": "ferry",
                 }
             ),
             False,
@@ -95,6 +96,53 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
 )
 def test_use_template_row(template_row: pd.Series, expected: bool) -> None:
     assert _use_template_row("Bus", template_row) == expected
+
+
+@pytest.mark.parametrize(
+    ("category", "expected_length"),
+    [
+        (
+            "Bus",
+            1,
+        ),
+        (
+            "Ferry",
+            0,
+        ),
+    ],
+)
+def test_process_row(
+    category: str,
+    expected_length: int,
+) -> None:
+    template_row = pd.Series(
+        {
+            "Campaign Name": "USA - A - B - EN",
+            "Ad Group Name": "A - B",
+            "Keyword": "k1",
+            "Max CPC": "",
+            "Language Code": "EN",
+            "Negative": "FALSE",
+            "Level": "",
+            "Keyword Match Type": "Exact",
+            "Match Type": "Exact",
+            "Category": "Bus",
+        }
+    )
+    new_campaign_row = pd.Series(
+        {
+            "Campaign Name": "USA - A - B - EN",
+            "Country": "USA",
+            "Station From": "A",
+            "Station To": "B",
+            "Language Code": "EN",
+            "Category": category,
+        }
+    )
+    final_df = pd.DataFrame(columns=template_row.index)
+    final_df = _process_row(new_campaign_row, template_row, final_df, "keyword")
+
+    assert len(final_df) == expected_length
 
 
 @pytest.mark.parametrize(
