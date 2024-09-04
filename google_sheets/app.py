@@ -362,14 +362,6 @@ MANDATORY_KEYWORD_TEMPLATE_COLUMNS = [
 ]
 
 
-def _validate_target_resource(target_resource: Optional[str]) -> None:
-    if target_resource not in ["ad", "keyword"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The target resource should be either 'ad' or 'keyword'.",
-        )
-
-
 async def process_campaign_data(
     template_sheet_values: GoogleSheetValues,
     new_campaign_sheet_values: GoogleSheetValues,

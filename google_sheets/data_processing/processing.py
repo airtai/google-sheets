@@ -162,7 +162,7 @@ def _use_template_row(category: Any, template_row: pd.Series) -> bool:
     if not template_row["Category"]:
         return True
 
-    return template_row["Category"] == category  # type: ignore[no-any-return]
+    return template_row["Category"].lower() == str(category).lower()  # type: ignore[no-any-return]
 
 
 def _process_row(
@@ -219,6 +219,7 @@ def _process_row(
 
         final_df = pd.concat([final_df, pd.DataFrame([new_row])], ignore_index=True)
 
+    final_df = final_df.drop_duplicates(ignore_index=True)
     return final_df
 
 
