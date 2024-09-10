@@ -260,7 +260,7 @@ def process_data_f(
                 new_campaign_row, template_row, final_df, target_resource
             )
 
-    final_df = final_df.drop(columns=["Language Code", "Category"])
+    final_df = final_df.drop(columns=["Language Code", "Category", "Target Category"])
     if target_resource == "keyword":
         final_df = final_df.drop(columns=["Keyword Match Type"])
     final_df = final_df.drop_duplicates(ignore_index=True)

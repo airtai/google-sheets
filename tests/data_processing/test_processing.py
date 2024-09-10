@@ -158,6 +158,7 @@ def test_process_row(
                     "Language Code": ["EN"],
                     "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                     "Match Type": ["Exact"],
+                    "Target Category": [False],
                 }
             ),
             pd.DataFrame(
@@ -238,6 +239,7 @@ def test_process_row(
                     "Language Code": ["EN"],
                     "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                     "Match Type": ["Exact"],
+                    "Target Category": [False],
                 }
             ),
             pd.DataFrame(
@@ -322,6 +324,7 @@ def test_process_row(
                         "{INSERT_STATION_FROM} - {INSERT_STATION_TO}",
                     ],
                     "Match Type": ["Exact", "Exact"],
+                    "Target Category": [False, False],
                 }
             ),
             pd.DataFrame(
@@ -380,6 +383,7 @@ def test_process_row(
                         "{INSERT_STATION_FROM} - {INSERT_STATION_TO}",
                     ],
                     "Match Type": ["Exact", "Exact"],
+                    "Target Category": [False, False],
                 }
             ),
             pd.DataFrame(
