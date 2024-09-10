@@ -175,6 +175,13 @@ def _process_row(
     if not _use_template_row(new_campaign_row["Category"], template_row):
         return final_df
 
+    # Positive keywords (Keyword Match Type) should be the same as Match Type (which is used as a part of Ad Group Name)
+    if target_resource == "keyword" and (
+        template_row["Negative"].lower() == "false"
+        and template_row["Keyword Match Type"] != template_row["Match Type"]
+    ):
+        return final_df
+
     stations = [
         {
             "Station From": new_campaign_row["Station From"],
@@ -204,22 +211,28 @@ def _process_row(
         new_row = new_row.str.replace(INSERT_STATION_FROM, station["Station From"])
         new_row = new_row.str.replace(INSERT_STATION_TO, station["Station To"])
         new_row = new_row.str.replace(INSERT_CRITERION_TYPE, new_row["Match Type"])
-        new_row = new_row.str.replace(INSERT_CATEGORY, new_campaign_row["Category"])
         new_row = new_row.str.replace(
             INSERT_TICKET_PRICE, new_campaign_row["Ticket Price"]
         )
 
         if target_resource == "ad":
             new_row["Final URL"] = station["Final Url"]
-        elif (
-            target_resource == "keyword"
-            and new_row["Negative"]
-            and new_row["Negative"].lower() == "true"
-        ):
-            new_row["Match Type"] = new_row["Keyword Match Type"]
 
-            if "Campaign" in new_row["Level"]:
-                new_row["Ad Group Name"] = None
+        elif target_resource == "keyword":
+            if new_row["Negative"] and new_row["Negative"].lower() == "true":
+                new_row["Match Type"] = new_row["Keyword Match Type"]
+
+                if "Campaign" in new_row["Level"]:
+                    new_row["Ad Group Name"] = None
+            elif (
+                new_row["Target Category"].lower() == "false"
+                and new_row["Match Type"] == "Exact"
+            ):
+                new_row["Keyword"] = (
+                    new_row["Keyword"].replace(INSERT_CATEGORY, "").strip()
+                )
+
+        new_row = new_row.str.replace(INSERT_CATEGORY, new_campaign_row["Category"])
 
         final_df = pd.concat([final_df, pd.DataFrame([new_row])], ignore_index=True)
 

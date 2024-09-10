@@ -119,7 +119,7 @@ def test_process_row(
         {
             "Campaign Name": "USA - A - B - EN",
             "Ad Group Name": "A - B",
-            "Keyword": "k1",
+            "Keyword": "k1 {INSERT_CATEGORY}",
             "Max CPC": "",
             "Language Code": "EN",
             "Negative": "FALSE",
@@ -127,6 +127,7 @@ def test_process_row(
             "Keyword Match Type": "Exact",
             "Match Type": "Exact",
             "Category": "Bus",
+            "Target Category": "False",
         }
     )
     new_campaign_row = pd.Series(
@@ -144,6 +145,8 @@ def test_process_row(
     final_df = _process_row(new_campaign_row, template_row, final_df, "keyword")
 
     assert len(final_df) == expected_length
+    if expected_length == 1:
+        assert final_df["Keyword"].values[0] == "k1"
 
 
 @pytest.mark.parametrize(
@@ -158,7 +161,7 @@ def test_process_row(
                     "Language Code": ["EN"],
                     "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                     "Match Type": ["Exact"],
-                    "Target Category": [False],
+                    "Target Category": ["False"],
                 }
             ),
             pd.DataFrame(
@@ -239,7 +242,7 @@ def test_process_row(
                     "Language Code": ["EN"],
                     "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                     "Match Type": ["Exact"],
-                    "Target Category": [False],
+                    "Target Category": ["False"],
                 }
             ),
             pd.DataFrame(
@@ -324,7 +327,7 @@ def test_process_row(
                         "{INSERT_STATION_FROM} - {INSERT_STATION_TO}",
                     ],
                     "Match Type": ["Exact", "Exact"],
-                    "Target Category": [False, False],
+                    "Target Category": ["False", "False"],
                 }
             ),
             pd.DataFrame(
@@ -383,7 +386,7 @@ def test_process_row(
                         "{INSERT_STATION_FROM} - {INSERT_STATION_TO}",
                     ],
                     "Match Type": ["Exact", "Exact"],
-                    "Target Category": [False, False],
+                    "Target Category": ["False", "False"],
                 }
             ),
             pd.DataFrame(

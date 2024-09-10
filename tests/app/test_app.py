@@ -477,7 +477,7 @@ class TestProcessData:
                 "Language Code": ["EN"],
                 "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                 "Match Type": ["Exact"],
-                "Target Category": [True],
+                "Target Category": ["True"],
             }
         )
         if isinstance(detail, GoogleSheetValues):
@@ -561,7 +561,7 @@ class TestProcessData:
                 "Language Code": ["EN"],
                 "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                 "Match Type": ["Exact"],
-                "Target Category": [False],
+                "Target Category": ["False"],
             }
         )
         result = await process_data(
