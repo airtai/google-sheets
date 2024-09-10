@@ -137,6 +137,7 @@ def test_process_row(
             "Station To": "B",
             "Language Code": "EN",
             "Category": category,
+            "Ticket Price": "100",
         }
     )
     final_df = pd.DataFrame(columns=template_row.index)
@@ -177,6 +178,7 @@ def test_process_row(
                     "Station To": ["C", "D"],
                     "Language Code": ["EN", "EN"],
                     "Category": ["Bus", "Bus"],
+                    "Ticket Price": ["100", "200"],
                 }
             ),
             pd.DataFrame(
@@ -256,6 +258,7 @@ def test_process_row(
                     "Station To": ["C", "D"],
                     "Language Code": ["EN", "EN"],
                     "Category": ["Bus", "Bus"],
+                    "Ticket Price": ["100", "200"],
                 }
             ),
             pd.DataFrame(
@@ -339,6 +342,7 @@ def test_process_row(
                     "Station To": ["C", "D"],
                     "Language Code": ["EN", "DE"],
                     "Category": ["Bus", "Bus"],
+                    "Ticket Price": ["100", "200"],
                 }
             ),
             pd.DataFrame(
@@ -396,6 +400,7 @@ def test_process_row(
                     "Station To": ["C", "D"],
                     "Language Code": ["EN", "DE"],
                     "Category": ["Bus", "Bus"],
+                    "Ticket Price": ["100", "200"],
                 }
             ),
             pd.DataFrame(

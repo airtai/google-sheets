@@ -33,6 +33,7 @@ INSERT_COUNTRY = "{INSERT_COUNTRY}"
 INSERT_CRITERION_TYPE = "{INSERT_CRITERION_TYPE}"
 INSERT_LANGUAGE_CODE = "{INSERT_LANGUAGE_CODE}"
 INSERT_CATEGORY = "{INSERT_CATEGORY}"
+INSERT_TICKET_PRICE = "{INSERT_TICKET_PRICE}"
 
 
 def _update_campaign_name(
@@ -204,6 +205,9 @@ def _process_row(
         new_row = new_row.str.replace(INSERT_STATION_TO, station["Station To"])
         new_row = new_row.str.replace(INSERT_CRITERION_TYPE, new_row["Match Type"])
         new_row = new_row.str.replace(INSERT_CATEGORY, new_campaign_row["Category"])
+        new_row = new_row.str.replace(
+            INSERT_TICKET_PRICE, new_campaign_row["Ticket Price"]
+        )
 
         if target_resource == "ad":
             new_row["Final URL"] = station["Final Url"]
