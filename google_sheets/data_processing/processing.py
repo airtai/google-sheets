@@ -175,6 +175,13 @@ def _process_row(
     if not _use_template_row(new_campaign_row["Category"], template_row):
         return final_df
 
+    # Positive keywords (Keyword Match Type) should be the same as Match Type (which is used as a part of Ad Group Name)
+    if target_resource == "keyword" and (
+        template_row["Negative"].lower() == "false"
+        and template_row["Keyword Match Type"] != template_row["Match Type"]
+    ):
+        return final_df
+
     stations = [
         {
             "Station From": new_campaign_row["Station From"],
@@ -204,22 +211,28 @@ def _process_row(
         new_row = new_row.str.replace(INSERT_STATION_FROM, station["Station From"])
         new_row = new_row.str.replace(INSERT_STATION_TO, station["Station To"])
         new_row = new_row.str.replace(INSERT_CRITERION_TYPE, new_row["Match Type"])
-        new_row = new_row.str.replace(INSERT_CATEGORY, new_campaign_row["Category"])
         new_row = new_row.str.replace(
             INSERT_TICKET_PRICE, new_campaign_row["Ticket Price"]
         )
 
         if target_resource == "ad":
             new_row["Final URL"] = station["Final Url"]
-        elif (
-            target_resource == "keyword"
-            and new_row["Negative"]
-            and new_row["Negative"].lower() == "true"
-        ):
-            new_row["Match Type"] = new_row["Keyword Match Type"]
 
-            if "Campaign" in new_row["Level"]:
-                new_row["Ad Group Name"] = None
+        elif target_resource == "keyword":
+            if new_row["Negative"] and new_row["Negative"].lower() == "true":
+                new_row["Match Type"] = new_row["Keyword Match Type"]
+
+                if "Campaign" in new_row["Level"]:
+                    new_row["Ad Group Name"] = None
+            elif (
+                new_row["Target Category"].lower() == "false"
+                and new_row["Match Type"] == "Exact"
+            ):
+                new_row["Keyword"] = (
+                    new_row["Keyword"].replace(INSERT_CATEGORY, "").strip()
+                )
+
+        new_row = new_row.str.replace(INSERT_CATEGORY, new_campaign_row["Category"])
 
         final_df = pd.concat([final_df, pd.DataFrame([new_row])], ignore_index=True)
 
@@ -260,7 +273,7 @@ def process_data_f(
                 new_campaign_row, template_row, final_df, target_resource
             )
 
-    final_df = final_df.drop(columns=["Language Code", "Category"])
+    final_df = final_df.drop(columns=["Language Code", "Category", "Target Category"])
     if target_resource == "keyword":
         final_df = final_df.drop(columns=["Keyword Match Type"])
     final_df = final_df.drop_duplicates(ignore_index=True)
@@ -354,10 +367,53 @@ def _validate_output_data_ad(df: pd.DataFrame) -> pd.DataFrame:  # noqa: C901
     return df
 
 
+MAX_SITELINK_TEXT_LENGTH = 25
+MAX_SITELINK_DESCRIPTION_LENGTH = 35
+
+
+def _validate_output_data_campaign(df: pd.DataFrame) -> pd.DataFrame:
+    df.insert(0, "Issues", "")
+
+    sitelink_text_columns = [
+        col for col in df.columns if col.startswith("Sitelink") and col.endswith("Text")
+    ]
+
+    for index, row in df.iterrows():
+        for site_text_column in sitelink_text_columns:
+            site_text = row[site_text_column]
+            if not site_text:
+                continue
+            error_msg = ""
+
+            final_url_column = site_text_column.replace("Text", "Final URL")
+            if not row.get(final_url_column, None):
+                error_msg += f"{final_url_column} is missing.\n"
+            if len(site_text) > MAX_SITELINK_TEXT_LENGTH:
+                error_msg += f"Sitelink text length should be less than {MAX_SITELINK_TEXT_LENGTH} characters, found {len(site_text)} in column {site_text_column}.\n"
+            site_description_column = site_text_column.replace("Text", "Description")
+            for i in [1, 2]:
+                site_description = row.get(site_description_column + f" {i}", None)
+                if (
+                    site_description
+                    and len(site_description) > MAX_SITELINK_DESCRIPTION_LENGTH
+                ):
+                    error_msg += f"Sitelink description length should be less than {MAX_SITELINK_DESCRIPTION_LENGTH} characters, found {len(site_description)} in column {site_description_column} {i}.\n"
+
+            if error_msg:
+                df.loc[index, "Issues"] += error_msg
+
+    if not df["Issues"].any():
+        df = df.drop(columns=["Issues"])
+
+    return df
+
+
 def validate_output_data(
-    df: pd.DataFrame, target_resource: Literal["ad", "campaign" "keyword"]
+    df: pd.DataFrame, target_resource: Literal["ad", "campaign", "keyword"]
 ) -> pd.DataFrame:
     if target_resource == "ad":
         return _validate_output_data_ad(df)
-    # No validation required for campaign and keyword data currently
+    elif target_resource == "campaign":
+        return _validate_output_data_campaign(df)
+    # No validation required for keyword data currently
     return df
