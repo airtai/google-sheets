@@ -409,6 +409,7 @@ class TestProcessData:
                             "Final Url To",
                             "Language Code",
                             "Category",
+                            "Ticket Price",
                         ],
                         [
                             "India",
@@ -418,6 +419,7 @@ class TestProcessData:
                             "https://www.example.com/to",
                             "EN",
                             "Bus",
+                            "10.5",
                         ],
                     ]
                 ),
@@ -475,6 +477,7 @@ class TestProcessData:
                 "Language Code": ["EN"],
                 "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                 "Match Type": ["Exact"],
+                "Target Category": ["True"],
             }
         )
         if isinstance(detail, GoogleSheetValues):
@@ -517,7 +520,7 @@ class TestProcessData:
                     "Bus",
                     "https://www.example.com/from",
                     "H" * 31,
-                    "Headline 2",
+                    "Headline 2 {INSERT_TICKET_PRICE}",
                     "Headline 3",
                     "Description Line 1",
                     "Description Line 2",
@@ -536,6 +539,7 @@ class TestProcessData:
                     "Final Url To",
                     "Language Code",
                     "Category",
+                    "Ticket Price",
                 ],
                 [
                     "India",
@@ -545,6 +549,7 @@ class TestProcessData:
                     "https://www.example.com/to",
                     "EN",
                     "Bus",
+                    "10.5",
                 ],
             ]
         )
@@ -556,6 +561,7 @@ class TestProcessData:
                 "Language Code": ["EN"],
                 "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                 "Match Type": ["Exact"],
+                "Target Category": ["False"],
             }
         )
         result = await process_data(
@@ -588,7 +594,7 @@ class TestProcessData:
                     "Exact",
                     "https://www.example.com/from",
                     "HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH",
-                    "Headline 2",
+                    "Headline 2 10.5",
                     "Headline 3",
                     "Description Line 1",
                     "Description Line 2",
@@ -602,7 +608,7 @@ class TestProcessData:
                     "Exact",
                     "https://www.example.com/to",
                     "HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH",
-                    "Headline 2",
+                    "Headline 2 10.5",
                     "Headline 3",
                     "Description Line 1",
                     "Description Line 2",

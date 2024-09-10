@@ -10,6 +10,7 @@ from google_sheets.data_processing.processing import (
     _update_campaign_name,
     _use_template_row,
     _validate_language_codes,
+    _validate_output_data_campaign,
     process_campaign_data_f,
     process_data_f,
     validate_input_data,
@@ -119,7 +120,7 @@ def test_process_row(
         {
             "Campaign Name": "USA - A - B - EN",
             "Ad Group Name": "A - B",
-            "Keyword": "k1",
+            "Keyword": "k1 {INSERT_CATEGORY}",
             "Max CPC": "",
             "Language Code": "EN",
             "Negative": "FALSE",
@@ -127,6 +128,7 @@ def test_process_row(
             "Keyword Match Type": "Exact",
             "Match Type": "Exact",
             "Category": "Bus",
+            "Target Category": "False",
         }
     )
     new_campaign_row = pd.Series(
@@ -137,12 +139,15 @@ def test_process_row(
             "Station To": "B",
             "Language Code": "EN",
             "Category": category,
+            "Ticket Price": "100",
         }
     )
     final_df = pd.DataFrame(columns=template_row.index)
     final_df = _process_row(new_campaign_row, template_row, final_df, "keyword")
 
     assert len(final_df) == expected_length
+    if expected_length == 1:
+        assert final_df["Keyword"].values[0] == "k1"
 
 
 @pytest.mark.parametrize(
@@ -157,6 +162,7 @@ def test_process_row(
                     "Language Code": ["EN"],
                     "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                     "Match Type": ["Exact"],
+                    "Target Category": ["False"],
                 }
             ),
             pd.DataFrame(
@@ -177,6 +183,7 @@ def test_process_row(
                     "Station To": ["C", "D"],
                     "Language Code": ["EN", "EN"],
                     "Category": ["Bus", "Bus"],
+                    "Ticket Price": ["100", "200"],
                 }
             ),
             pd.DataFrame(
@@ -236,6 +243,7 @@ def test_process_row(
                     "Language Code": ["EN"],
                     "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                     "Match Type": ["Exact"],
+                    "Target Category": ["False"],
                 }
             ),
             pd.DataFrame(
@@ -256,6 +264,7 @@ def test_process_row(
                     "Station To": ["C", "D"],
                     "Language Code": ["EN", "EN"],
                     "Category": ["Bus", "Bus"],
+                    "Ticket Price": ["100", "200"],
                 }
             ),
             pd.DataFrame(
@@ -319,6 +328,7 @@ def test_process_row(
                         "{INSERT_STATION_FROM} - {INSERT_STATION_TO}",
                     ],
                     "Match Type": ["Exact", "Exact"],
+                    "Target Category": ["False", "False"],
                 }
             ),
             pd.DataFrame(
@@ -339,6 +349,7 @@ def test_process_row(
                     "Station To": ["C", "D"],
                     "Language Code": ["EN", "DE"],
                     "Category": ["Bus", "Bus"],
+                    "Ticket Price": ["100", "200"],
                 }
             ),
             pd.DataFrame(
@@ -376,6 +387,7 @@ def test_process_row(
                         "{INSERT_STATION_FROM} - {INSERT_STATION_TO}",
                     ],
                     "Match Type": ["Exact", "Exact"],
+                    "Target Category": ["False", "False"],
                 }
             ),
             pd.DataFrame(
@@ -396,6 +408,7 @@ def test_process_row(
                     "Station To": ["C", "D"],
                     "Language Code": ["EN", "DE"],
                     "Category": ["Bus", "Bus"],
+                    "Ticket Price": ["100", "200"],
                 }
             ),
             pd.DataFrame(
@@ -697,3 +710,59 @@ def test_validate_language_codes(
             _validate_language_codes(new_campaign_df, valid_language_codes, "table")
     else:
         _validate_language_codes(new_campaign_df, valid_language_codes, "table")
+
+
+@pytest.mark.parametrize(
+    ("df", "expected_issues"),
+    [
+        (
+            pd.DataFrame(
+                {
+                    "Sitelink 1 Text": ["S1"],
+                    "Sitelink 1 Final URL": ["URL"],
+                },
+            ),
+            None,
+        ),
+        (
+            pd.DataFrame(
+                {
+                    "Sitelink 1 Text": ["S1"],
+                    "Sitelink 1 Final URL": ["URL"],
+                    "Sitelink 1 Description 1": ["D1"],
+                    "Sitelink 1 Description 2": ["D2"],
+                },
+            ),
+            None,
+        ),
+        (
+            pd.DataFrame(
+                {
+                    "Sitelink 1 Text": ["S1"],
+                }
+            ),
+            "Sitelink 1 Final URL is missing.\n",
+        ),
+        (
+            pd.DataFrame(
+                {
+                    "Sitelink 1 Text": ["S" * 26],
+                    "Sitelink 1 Final URL": ["URL"],
+                    "Sitelink 1 Description 1": ["D" * 36],
+                    "Sitelink 1 Description 2": ["D2"],
+                },
+            ),
+            """Sitelink text length should be less than 25 characters, found 26 in column Sitelink 1 Text.
+Sitelink description length should be less than 35 characters, found 36 in column Sitelink 1 Description 1.\n""",
+        ),
+    ],
+)
+def test_validate_output_data_campaign(
+    df: pd.DataFrame, expected_issues: Optional[str]
+) -> None:
+    expected = df.copy()
+    result = _validate_output_data_campaign(df)
+    if expected_issues:
+        assert result["Issues"].values[0] == expected_issues
+    else:
+        assert result.equals(expected)
