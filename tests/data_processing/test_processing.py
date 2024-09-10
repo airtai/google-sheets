@@ -10,6 +10,7 @@ from google_sheets.data_processing.processing import (
     _update_campaign_name,
     _use_template_row,
     _validate_language_codes,
+    _validate_output_data_campaign,
     process_campaign_data_f,
     process_data_f,
     validate_input_data,
@@ -709,3 +710,59 @@ def test_validate_language_codes(
             _validate_language_codes(new_campaign_df, valid_language_codes, "table")
     else:
         _validate_language_codes(new_campaign_df, valid_language_codes, "table")
+
+
+@pytest.mark.parametrize(
+    ("df", "expected_issues"),
+    [
+        (
+            pd.DataFrame(
+                {
+                    "Sitelink 1 Text": ["S1"],
+                    "Sitelink 1 Final URL": ["URL"],
+                },
+            ),
+            None,
+        ),
+        (
+            pd.DataFrame(
+                {
+                    "Sitelink 1 Text": ["S1"],
+                    "Sitelink 1 Final URL": ["URL"],
+                    "Sitelink 1 Description 1": ["D1"],
+                    "Sitelink 1 Description 2": ["D2"],
+                },
+            ),
+            None,
+        ),
+        (
+            pd.DataFrame(
+                {
+                    "Sitelink 1 Text": ["S1"],
+                }
+            ),
+            "Sitelink 1 Final URL is missing.\n",
+        ),
+        (
+            pd.DataFrame(
+                {
+                    "Sitelink 1 Text": ["S" * 26],
+                    "Sitelink 1 Final URL": ["URL"],
+                    "Sitelink 1 Description 1": ["D" * 36],
+                    "Sitelink 1 Description 2": ["D2"],
+                },
+            ),
+            """Sitelink text length should be less than 25 characters, found 26 in column Sitelink 1 Text.
+Sitelink description length should be less than 35 characters, found 36 in column Sitelink 1 Description 1.\n""",
+        ),
+    ],
+)
+def test_validate_output_data_campaign(
+    df: pd.DataFrame, expected_issues: Optional[str]
+) -> None:
+    expected = df.copy()
+    result = _validate_output_data_campaign(df)
+    if expected_issues:
+        assert result["Issues"].values[0] == expected_issues
+    else:
+        assert result.equals(expected)

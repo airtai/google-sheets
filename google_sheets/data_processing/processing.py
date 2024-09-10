@@ -367,10 +367,53 @@ def _validate_output_data_ad(df: pd.DataFrame) -> pd.DataFrame:  # noqa: C901
     return df
 
 
+MAX_SITELINK_TEXT_LENGTH = 25
+MAX_SITELINK_DESCRIPTION_LENGTH = 35
+
+
+def _validate_output_data_campaign(df: pd.DataFrame) -> pd.DataFrame:
+    df.insert(0, "Issues", "")
+
+    sitelink_text_columns = [
+        col for col in df.columns if col.startswith("Sitelink") and col.endswith("Text")
+    ]
+
+    for index, row in df.iterrows():
+        for site_text_column in sitelink_text_columns:
+            site_text = row[site_text_column]
+            if not site_text:
+                continue
+            error_msg = ""
+
+            final_url_column = site_text_column.replace("Text", "Final URL")
+            if not row.get(final_url_column, None):
+                error_msg += f"{final_url_column} is missing.\n"
+            if len(site_text) > MAX_SITELINK_TEXT_LENGTH:
+                error_msg += f"Sitelink text length should be less than {MAX_SITELINK_TEXT_LENGTH} characters, found {len(site_text)} in column {site_text_column}.\n"
+            site_description_column = site_text_column.replace("Text", "Description")
+            for i in [1, 2]:
+                site_description = row.get(site_description_column + f" {i}", None)
+                if (
+                    site_description
+                    and len(site_description) > MAX_SITELINK_DESCRIPTION_LENGTH
+                ):
+                    error_msg += f"Sitelink description length should be less than {MAX_SITELINK_DESCRIPTION_LENGTH} characters, found {len(site_description)} in column {site_description_column} {i}.\n"
+
+            if error_msg:
+                df.loc[index, "Issues"] += error_msg
+
+    if not df["Issues"].any():
+        df = df.drop(columns=["Issues"])
+
+    return df
+
+
 def validate_output_data(
-    df: pd.DataFrame, target_resource: Literal["ad", "campaign" "keyword"]
+    df: pd.DataFrame, target_resource: Literal["ad", "campaign", "keyword"]
 ) -> pd.DataFrame:
     if target_resource == "ad":
         return _validate_output_data_ad(df)
-    # No validation required for campaign and keyword data currently
+    elif target_resource == "campaign":
+        return _validate_output_data_campaign(df)
+    # No validation required for keyword data currently
     return df
