@@ -514,6 +514,7 @@ class TestProcessData:
                     "Description Line 2",
                     "Path 1",
                     "Path 2",
+                    "Match Type",
                 ],
                 [
                     "EN",
@@ -526,6 +527,7 @@ class TestProcessData:
                     "Description Line 2",
                     "Path 1",
                     "Path 2",
+                    "Exact",
                 ],
             ]
         )

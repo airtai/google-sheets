@@ -251,11 +251,12 @@ def process_data_f(
     ].str.upper()
     template_df["Language Code"] = template_df["Language Code"].str.upper()
     new_campaign_df["Language Code"] = new_campaign_df["Language Code"].str.upper()
+    on = ["Language Code", "Match Type"] if target_resource == "ad" else "Language Code"
     template_df = pd.merge(
         merged_campaigns_ad_groups_df,
         template_df,
         how="inner",
-        on="Language Code",
+        on=on,
     )
 
     _validate_language_codes(
