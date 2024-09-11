@@ -1,4 +1,4 @@
-from typing import Any, List, Literal
+from typing import Any, Dict, List, Literal
 
 import pandas as pd
 
@@ -166,6 +166,24 @@ def _use_template_row(category: Any, template_row: pd.Series) -> bool:
     return template_row["Category"].lower() == str(category).lower()  # type: ignore[no-any-return]
 
 
+def _replace_values(
+    new_campaign_row: pd.Series, new_row: pd.Series, station: Dict[str, Any]
+) -> pd.Series:
+    new_row = new_row.str.replace(INSERT_COUNTRY, new_campaign_row["Country"])
+    new_row = new_row.str.replace(INSERT_STATION_FROM, station["Station From"])
+    new_row = new_row.str.replace(INSERT_STATION_TO, station["Station To"])
+    new_row = new_row.str.replace(INSERT_CRITERION_TYPE, new_row["Match Type"])
+    if new_campaign_row["Ticket Price"]:
+        new_row = new_row.str.replace(
+            INSERT_TICKET_PRICE, new_campaign_row["Ticket Price"]
+        )
+    else:
+        # Locate all the columns with the string "{INSERT_TICKET_PRICE}"
+        # and replace them WHOLE column with an empty string (not only the string)
+        new_row = new_row.str.replace(r".*{INSERT_TICKET_PRICE}.*", "", regex=True)
+    return new_row
+
+
 def _process_row(
     new_campaign_row: pd.Series,
     template_row: pd.Series,
@@ -206,14 +224,7 @@ def _process_row(
             language_code=new_row["Language Code"],
             include_locations=include_locations,
         )
-
-        new_row = new_row.str.replace(INSERT_COUNTRY, new_campaign_row["Country"])
-        new_row = new_row.str.replace(INSERT_STATION_FROM, station["Station From"])
-        new_row = new_row.str.replace(INSERT_STATION_TO, station["Station To"])
-        new_row = new_row.str.replace(INSERT_CRITERION_TYPE, new_row["Match Type"])
-        new_row = new_row.str.replace(
-            INSERT_TICKET_PRICE, new_campaign_row["Ticket Price"]
-        )
+        new_row = _replace_values(new_campaign_row, new_row, station)
 
         if target_resource == "ad":
             new_row["Final URL"] = station["Final Url"]
@@ -251,11 +262,12 @@ def process_data_f(
     ].str.upper()
     template_df["Language Code"] = template_df["Language Code"].str.upper()
     new_campaign_df["Language Code"] = new_campaign_df["Language Code"].str.upper()
+    on = ["Language Code", "Match Type"] if target_resource == "ad" else "Language Code"
     template_df = pd.merge(
         merged_campaigns_ad_groups_df,
         template_df,
         how="inner",
-        on="Language Code",
+        on=on,
     )
 
     _validate_language_codes(
