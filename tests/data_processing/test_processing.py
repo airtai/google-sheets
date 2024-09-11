@@ -7,6 +7,7 @@ from google_sheets.data_processing.processing import (
     _copy_all_with_prefixes,
     _get_target_location,
     _process_row,
+    _replace_values,
     _update_campaign_name,
     _use_template_row,
     _validate_language_codes,
@@ -766,3 +767,73 @@ def test_validate_output_data_campaign(
         assert result["Issues"].values[0] == expected_issues
     else:
         assert result.equals(expected)
+
+
+@pytest.mark.parametrize(
+    ("new_campaign_row", "expected"),
+    [
+        (
+            pd.Series(
+                {
+                    "Country": "USA",
+                    "Language Code": "EN",
+                    "Category": "Bus",
+                    "Ticket Price": "100",
+                }
+            ),
+            pd.Series(
+                {
+                    "Campaign Name": "USA - A - B",
+                    "Ad Group Name": "A - B",
+                    "Headline 1": "H1",
+                    "Headline 2": "H2",
+                    "Headline 3": "H3 100",
+                    "Description 1": "D1",
+                    "Match Type": "Exact",
+                }
+            ),
+        ),
+        (
+            pd.Series(
+                {
+                    "Country": "USA",
+                    "Language Code": "EN",
+                    "Category": "Bus",
+                    "Ticket Price": "",
+                }
+            ),
+            pd.Series(
+                {
+                    "Campaign Name": "USA - A - B",
+                    "Ad Group Name": "A - B",
+                    "Headline 1": "H1",
+                    "Headline 2": "H2",
+                    "Headline 3": "",
+                    "Description 1": "D1",
+                    "Match Type": "Exact",
+                }
+            ),
+        ),
+    ],
+)
+def test_replace_values(
+    new_campaign_row: pd.Series,
+    expected: pd.Series,
+) -> None:
+    new_row = pd.Series(
+        {
+            "Campaign Name": "{INSERT_COUNTRY} - {INSERT_STATION_FROM} - {INSERT_STATION_TO}",
+            "Ad Group Name": "{INSERT_STATION_FROM} - {INSERT_STATION_TO}",
+            "Headline 1": "H1",
+            "Headline 2": "H2",
+            "Headline 3": "H3 {INSERT_TICKET_PRICE}",
+            "Description 1": "D1",
+            "Match Type": "Exact",
+        }
+    )
+    station = {
+        "Station From": "A",
+        "Station To": "B",
+    }
+    result = _replace_values(new_campaign_row, new_row, station)
+    assert result.equals(expected)
