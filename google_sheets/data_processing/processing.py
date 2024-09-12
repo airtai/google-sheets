@@ -279,13 +279,16 @@ def process_data_f(
     final_df = pd.DataFrame(columns=template_df.columns)
     for _, new_campaign_row in new_campaign_df.iterrows():
         for _, template_row in template_df[
-            template_df["Language Code"] == new_campaign_row["Language Code"]
+            (template_df["Language Code"] == new_campaign_row["Language Code"])
+            & (template_df["Ad Group Category"] == new_campaign_row["Category"])
         ].iterrows():
             final_df = _process_row(
                 new_campaign_row, template_row, final_df, target_resource
             )
 
-    final_df = final_df.drop(columns=["Language Code", "Category", "Target Category"])
+    final_df = final_df.drop(
+        columns=["Language Code", "Category", "Target Category", "Ad Group Category"]
+    )
     if target_resource == "keyword":
         final_df = final_df.drop(columns=["Keyword Match Type"])
     final_df = final_df.drop_duplicates(ignore_index=True)

@@ -164,6 +164,7 @@ def test_process_row(
                     "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                     "Match Type": ["Exact"],
                     "Target Category": ["False"],
+                    "Ad Group Category": ["Bus"],
                 }
             ),
             pd.DataFrame(
@@ -245,6 +246,7 @@ def test_process_row(
                     "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                     "Match Type": ["Exact"],
                     "Target Category": ["False"],
+                    "Ad Group Category": ["Bus"],
                 }
             ),
             pd.DataFrame(
@@ -330,6 +332,7 @@ def test_process_row(
                     ],
                     "Match Type": ["Exact", "Exact"],
                     "Target Category": ["False", "False"],
+                    "Ad Group Category": ["Bus", "Bus"],
                 }
             ),
             pd.DataFrame(
@@ -389,6 +392,7 @@ def test_process_row(
                     ],
                     "Match Type": ["Exact", "Exact"],
                     "Target Category": ["False", "False"],
+                    "Ad Group Category": ["Bus", "Bus"],
                 }
             ),
             pd.DataFrame(
