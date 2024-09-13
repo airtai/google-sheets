@@ -395,9 +395,28 @@ class TestProcessData:
                             "Language Code",
                             "Category",
                             "Ad Group Category",
+                            "Real Category",
                         ],
-                        ["Keyword A", "Exact", None, "False", "EN", "Bus", "Bus"],
-                        ["Keyword N", "Broad", "Campaign", "True", "EN", "Bus", "Bus"],
+                        [
+                            "Keyword A",
+                            "Exact",
+                            None,
+                            "False",
+                            "EN",
+                            "Bus",
+                            "Bus",
+                            "Bus",
+                        ],
+                        [
+                            "Keyword N",
+                            "Broad",
+                            "Campaign",
+                            "True",
+                            "EN",
+                            "Bus",
+                            "Bus",
+                            "Bus",
+                        ],
                     ]
                 ),
                 GoogleSheetValues(
@@ -517,6 +536,7 @@ class TestProcessData:
                     "Path 2",
                     "Match Type",
                     "Ad Group Category",
+                    "Real Category",
                 ],
                 [
                     "EN",
@@ -530,6 +550,7 @@ class TestProcessData:
                     "Path 1",
                     "Path 2",
                     "Exact",
+                    "Bus",
                     "Bus",
                 ],
             ]

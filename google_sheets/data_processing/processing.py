@@ -159,13 +159,6 @@ def process_campaign_data_f(
     return final_df
 
 
-def _use_template_row(category: Any, template_row: pd.Series) -> bool:
-    if not template_row["Category"]:
-        return True
-
-    return template_row["Category"].lower() == str(category).lower()  # type: ignore[no-any-return]
-
-
 def _replace_values(
     new_campaign_row: pd.Series, new_row: pd.Series, station: Dict[str, Any]
 ) -> pd.Series:
@@ -190,9 +183,6 @@ def _process_row(
     final_df: pd.DataFrame,
     target_resource: str,
 ) -> pd.DataFrame:
-    if not _use_template_row(new_campaign_row["Category"], template_row):
-        return final_df
-
     # Positive keywords (Keyword Match Type) should be the same as Match Type (which is used as a part of Ad Group Name)
     if target_resource == "keyword" and (
         template_row["Negative"].lower() == "false"
@@ -243,7 +233,7 @@ def _process_row(
                     new_row["Keyword"].replace(INSERT_CATEGORY, "").strip()
                 )
 
-        new_row = new_row.str.replace(INSERT_CATEGORY, new_campaign_row["Category"])
+        new_row = new_row.str.replace(INSERT_CATEGORY, new_row["Real Category"])
 
         final_df = pd.concat([final_df, pd.DataFrame([new_row])], ignore_index=True)
 
@@ -270,6 +260,15 @@ def process_data_f(
         on=on,
     )
 
+    template_df = template_df[
+        (template_df["Category"].isna())
+        | (template_df["Category"] == "")
+        | (
+            template_df["Real Category"].str.lower()
+            == template_df["Category"].str.lower()
+        )
+    ]
+
     _validate_language_codes(
         new_campaign_df,
         valid_language_codes=template_df["Language Code"].unique(),
@@ -287,7 +286,13 @@ def process_data_f(
             )
 
     final_df = final_df.drop(
-        columns=["Language Code", "Category", "Target Category", "Ad Group Category"]
+        columns=[
+            "Language Code",
+            "Category",
+            "Target Category",
+            "Ad Group Category",
+            "Real Category",
+        ]
     )
     if target_resource == "keyword":
         final_df = final_df.drop(columns=["Keyword Match Type"])

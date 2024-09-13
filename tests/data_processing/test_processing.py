@@ -9,7 +9,6 @@ from google_sheets.data_processing.processing import (
     _process_row,
     _replace_values,
     _update_campaign_name,
-    _use_template_row,
     _validate_language_codes,
     _validate_output_data_campaign,
     process_campaign_data_f,
@@ -60,56 +59,11 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
 
 
 @pytest.mark.parametrize(
-    ("template_row", "expected"),
-    [
-        (
-            pd.Series(
-                {
-                    "Category": "bus",
-                }
-            ),
-            True,
-        ),
-        (
-            pd.Series(
-                {
-                    "Category": None,
-                }
-            ),
-            True,
-        ),
-        (
-            pd.Series(
-                {
-                    "Category": "ferry",
-                }
-            ),
-            False,
-        ),
-        (
-            pd.Series(
-                {
-                    "Category": "",
-                }
-            ),
-            True,
-        ),
-    ],
-)
-def test_use_template_row(template_row: pd.Series, expected: bool) -> None:
-    assert _use_template_row("Bus", template_row) == expected
-
-
-@pytest.mark.parametrize(
     ("category", "expected_length"),
     [
         (
             "Bus",
             1,
-        ),
-        (
-            "Ferry",
-            0,
         ),
     ],
 )
@@ -130,6 +84,8 @@ def test_process_row(
             "Match Type": "Exact",
             "Category": "Bus",
             "Target Category": "False",
+            "Ad Group Category": "Bus",
+            "Real Category": "Bus",
         }
     )
     new_campaign_row = pd.Series(
@@ -165,6 +121,7 @@ def test_process_row(
                     "Match Type": ["Exact"],
                     "Target Category": ["False"],
                     "Ad Group Category": ["Bus"],
+                    "Real Category": ["Bus"],
                 }
             ),
             pd.DataFrame(
@@ -247,6 +204,7 @@ def test_process_row(
                     "Match Type": ["Exact"],
                     "Target Category": ["False"],
                     "Ad Group Category": ["Bus"],
+                    "Real Category": ["Bus"],
                 }
             ),
             pd.DataFrame(
@@ -333,6 +291,7 @@ def test_process_row(
                     "Match Type": ["Exact", "Exact"],
                     "Target Category": ["False", "False"],
                     "Ad Group Category": ["Bus", "Bus"],
+                    "Real Category": ["Bus", "Bus"],
                 }
             ),
             pd.DataFrame(
@@ -393,6 +352,7 @@ def test_process_row(
                     "Match Type": ["Exact", "Exact"],
                     "Target Category": ["False", "False"],
                     "Ad Group Category": ["Bus", "Bus"],
+                    "Real Category": ["Bus", "Bus"],
                 }
             ),
             pd.DataFrame(
