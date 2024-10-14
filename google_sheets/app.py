@@ -88,7 +88,6 @@ def _check_parameters_are_not_none(kwargs: Dict[str, Any]) -> None:
 
 
 REDIRECT_DOMAIN = environ.get("REDIRECT_DOMAIN", "http://localhost:3000")
-DEFAULT_TIMEOUT = httpx.Timeout(timeout=5.0)
 
 
 # Route 2: Save user credentials/token to a JSON file
@@ -109,7 +108,7 @@ async def login_callback(
 
     token_request_data = get_token_request_data(code)
 
-    async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+    async with httpx.AsyncClient(timeout=5) as client:
         response = await client.post(
             oauth2_settings["tokenUrl"], data=token_request_data
         )
@@ -117,7 +116,7 @@ async def login_callback(
     if response.status_code == 200:
         token_data = response.json()
 
-    async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+    async with httpx.AsyncClient(timeout=5) as client:
         userinfo_response = await client.get(
             "https://www.googleapis.com/oauth2/v2/userinfo",
             headers={"Authorization": f"Bearer {token_data['access_token']}"},
