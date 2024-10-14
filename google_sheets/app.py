@@ -108,7 +108,7 @@ async def login_callback(
 
     token_request_data = get_token_request_data(code)
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=5) as client:
         response = await client.post(
             oauth2_settings["tokenUrl"], data=token_request_data
         )
@@ -116,7 +116,7 @@ async def login_callback(
     if response.status_code == 200:
         token_data = response.json()
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=5) as client:
         userinfo_response = await client.get(
             "https://www.googleapis.com/oauth2/v2/userinfo",
             headers={"Authorization": f"Bearer {token_data['access_token']}"},

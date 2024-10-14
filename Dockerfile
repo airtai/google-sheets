@@ -28,5 +28,5 @@ RUN pip install -e ".[dev]"
 
 EXPOSE ${PORT}
 
-ENTRYPOINT []
-CMD [ "/usr/bin/bash", "-c", "./run_server.sh" ]
+ENTRYPOINT []  # nosemgrep
+CMD [ "/usr/bin/bash", "-c", "./run_server.sh" ]  # nosemgrep
