@@ -47,7 +47,7 @@ dependencies = [
     "pydantic>=2.3,<3",
     "fastapi>=0.110.2",
     "prisma==0.13.1",
-    "google-api-python-client==2.148.0",
+    "google-api-python-client==2.149.0",
     "asyncify==0.10.0",
     "pandas==2.2.3"
 ]
@@ -56,7 +56,7 @@ dependencies = [
 # public distributions
 
 server = [
-    "uvicorn==0.30.6",
+    "uvicorn==0.32.0",
 ]
 
 # dev dependencies
@@ -66,7 +66,7 @@ lint = [
     "types-ujson",
     "types-Pygments",
     "types-docutils",
-    "mypy==1.11.2",
+    "mypy==1.13.0",
     "ruff==0.6.9",
     "pyupgrade-directories==0.3.0",
     "bandit==1.7.10",
@@ -75,7 +75,7 @@ lint = [
 ]
 
 test-core = [
-    "coverage[toml]==7.6.1",
+    "coverage[toml]==7.6.4",
     "pytest==8.3.3",
     "pytest-asyncio==0.24.0",
 ]
@@ -87,7 +87,7 @@ testing = [
 
 dev = [
     "google-sheets[server,lint,testing]",
-    "pre-commit==3.8.0",
+    "pre-commit==4.0.1",
     "detect-secrets==1.5.0",
 ]
 
