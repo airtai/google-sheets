@@ -177,6 +177,23 @@ def _replace_values(
     return new_row
 
 
+def _replace_headline_values(new_row: pd.Series, station: Dict[str, Any]) -> pd.Series:
+    # Filter columns that start with "Headline"
+    headline_columns = [col for col in new_row.index if col.startswith("Headline")]
+
+    # Perform replacements only in the headline columns
+    for col in headline_columns:
+        new_row[col] = (
+            new_row[col]
+            .replace(INSERT_STATION_FROM, station["Station From"])
+            .replace(INSERT_STATION_TO, station["Station To"])
+        )
+    return new_row
+
+
+USE_ORIGINAL_STATION_FROM = ["Transfer"]
+
+
 def _process_row(
     new_campaign_row: pd.Series,
     template_row: pd.Series,
@@ -214,6 +231,10 @@ def _process_row(
             language_code=new_row["Language Code"],
             include_locations=include_locations,
         )
+        if new_row["Category"] in USE_ORIGINAL_STATION_FROM:
+            # Use the original Station From in headlines for both directions
+            new_row = _replace_headline_values(new_row, stations[0])
+
         new_row = _replace_values(new_campaign_row, new_row, station)
 
         if target_resource == "ad":
