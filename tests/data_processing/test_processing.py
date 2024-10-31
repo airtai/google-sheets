@@ -7,6 +7,7 @@ from google_sheets.data_processing.processing import (
     _copy_all_with_prefixes,
     _get_target_location,
     _process_row,
+    _replace_headline_values,
     _replace_values,
     _update_campaign_name,
     _validate_language_codes,
@@ -58,6 +59,31 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
     assert validate_input_data(df, mandatory_columns, "name") == expected
 
 
+def test_replace_headline_values() -> None:
+    row = pd.Series(
+        {
+            "Name": "{INSERT_STATION_FROM}",
+            "Headline 1": "{INSERT_STATION_FROM} - {INSERT_STATION_TO}",
+            "Headline 2": "{INSERT_STATION_FROM}",
+        }
+    )
+    station = {
+        "Station From": "A",
+        "Station To": "B",
+    }
+
+    row = _replace_headline_values(row, station)
+    expected_row = pd.Series(
+        {
+            "Name": "{INSERT_STATION_FROM}",
+            "Headline 1": "A - B",
+            "Headline 2": "A",
+        }
+    )
+
+    assert row.equals(expected_row)
+
+
 @pytest.mark.parametrize(
     ("category", "expected_length"),
     [
@@ -65,6 +91,7 @@ def test_validate_input_data(df: pd.DataFrame, expected: str) -> None:
             "Bus",
             1,
         ),
+        ("Transfer", 1),
     ],
 )
 def test_process_row(
@@ -82,10 +109,10 @@ def test_process_row(
             "Level": "",
             "Keyword Match Type": "Exact",
             "Match Type": "Exact",
-            "Category": "Bus",
+            "Category": category,
             "Target Category": "False",
-            "Ad Group Category": "Bus",
-            "Real Category": "Bus",
+            "Ad Group Category": category,
+            "Real Category": category,
         }
     )
     new_campaign_row = pd.Series(
