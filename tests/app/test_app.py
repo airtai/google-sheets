@@ -358,8 +358,8 @@ class TestProcessData:
             (
                 GoogleSheetValues(
                     values=[
-                        ["Fake column"],
-                        ["fake"],
+                        ["Fake column", "Category"],
+                        ["fake", "Bus"],
                     ]
                 ),
                 GoogleSheetValues(
@@ -371,6 +371,7 @@ class TestProcessData:
                             "Final Url From",
                             "Final Url To",
                             "Language Code",
+                            "Category",
                         ],
                         [
                             "India",
@@ -379,6 +380,7 @@ class TestProcessData:
                             "https://www.example.com/from",
                             "https://www.example.com/to",
                             "EN",
+                            "Bus",
                         ],
                     ]
                 ),
@@ -394,8 +396,6 @@ class TestProcessData:
                             "Negative",
                             "Language Code",
                             "Category",
-                            "Ad Group Category",
-                            "Real Category",
                         ],
                         [
                             "Keyword A",
@@ -404,8 +404,6 @@ class TestProcessData:
                             "False",
                             "EN",
                             "Bus",
-                            "Bus",
-                            "Bus",
                         ],
                         [
                             "Keyword N",
@@ -413,8 +411,6 @@ class TestProcessData:
                             "Campaign",
                             "True",
                             "EN",
-                            "Bus",
-                            "Bus",
                             "Bus",
                         ],
                     ]
@@ -498,6 +494,8 @@ class TestProcessData:
                 "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                 "Match Type": ["Exact"],
                 "Target Category": ["True"],
+                "Ad Group Category": ["Bus"],
+                "Real Category": ["Bus"],
             }
         )
         if isinstance(detail, GoogleSheetValues):
@@ -535,8 +533,6 @@ class TestProcessData:
                     "Path 1",
                     "Path 2",
                     "Match Type",
-                    "Ad Group Category",
-                    "Real Category",
                 ],
                 [
                     "EN",
@@ -550,8 +546,6 @@ class TestProcessData:
                     "Path 1",
                     "Path 2",
                     "Exact",
-                    "Bus",
-                    "Bus",
                 ],
             ]
         )
@@ -588,6 +582,8 @@ class TestProcessData:
                 "Ad Group Name": ["{INSERT_STATION_FROM} - {INSERT_STATION_TO}"],
                 "Match Type": ["Exact"],
                 "Target Category": ["False"],
+                "Ad Group Category": ["bus"],
+                "Real Category": ["bus"],
             }
         )
         result = await process_data(
