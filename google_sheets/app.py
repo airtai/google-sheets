@@ -474,6 +474,13 @@ async def process_data(
             status_code=status.HTTP_400_BAD_REQUEST, detail=validation_error_msg
         )
 
+    template_df["Category"] = template_df["Category"].str.lower()
+    new_campaign_df["Category"] = new_campaign_df["Category"].str.lower()
+    for col in ["Ad Group Category", "Real Category"]:
+        merged_campaigns_ad_groups_df[col] = merged_campaigns_ad_groups_df[
+            col
+        ].str.lower()
+
     processed_df = process_data_f(
         merged_campaigns_ad_groups_df,
         template_df,

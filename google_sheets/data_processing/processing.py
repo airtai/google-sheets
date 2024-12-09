@@ -191,7 +191,7 @@ def _replace_headline_values(new_row: pd.Series, station: Dict[str, Any]) -> pd.
     return new_row
 
 
-USE_ORIGINAL_STATION_FROM = ["Transfer", "Taxi"]
+USE_ORIGINAL_STATION_FROM = ["transfer", "taxi"]
 
 
 def _process_row(
